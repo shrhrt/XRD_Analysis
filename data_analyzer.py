@@ -53,7 +53,8 @@ def create_plot_figure(
     filepaths: List[str],
     threshold: float,
     x_range: Tuple[Optional[float], Optional[float]],
-    reference_peaks: List[Dict[str, Any]]
+    reference_peaks: List[Dict[str, Any]],
+    figsize: Tuple[float, float] = (16, 9)
 ) -> Tuple[Optional[plt.Figure], Optional[str]]:
     """
     XRDデータからmatplotlibのFigureオブジェクトを生成する。
@@ -62,7 +63,7 @@ def create_plot_figure(
         Tuple[Optional[plt.Figure], Optional[str]]: 成功時は(Figure, None)、
                                                    失敗時は(None, エラーメッセージ)を返す。
     """
-    fig, ax = plt.subplots(figsize=(16, 9))
+    fig, ax = plt.subplots(figsize=figsize)
     has_data_to_plot = False
     parse_errors = []
 

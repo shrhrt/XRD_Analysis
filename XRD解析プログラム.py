@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox
+
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import data_analyzer
@@ -29,13 +30,25 @@ class XRDPlotter(tk.Frame):
         main_pane.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
         # --- 左側パネル (各種設定) ---
-        left_panel = tk.Frame(main_pane, width=380)
+        left_panel = tk.Frame(main_pane, width=400)
         main_pane.add(left_panel, stretch="never")
-        left_panel.rowconfigure(2, weight=1) # 参照ピークフレームを伸縮させる
+        left_panel.rowconfigure(0, weight=1)
         left_panel.columnconfigure(0, weight=1)
 
+        # --- タブコントロール ---
+        notebook = ttk.Notebook(left_panel)
+        notebook.grid(row=0, column=0, sticky="nsew")
+
+        plot_settings_tab = tk.Frame(notebook)
+        export_tab = tk.Frame(notebook)
+        notebook.add(plot_settings_tab, text="プロット設定")
+        notebook.add(export_tab, text="エクスポート")
+
+        plot_settings_tab.rowconfigure(2, weight=1) # 参照ピークフレームを伸縮させる
+        plot_settings_tab.columnconfigure(0, weight=1)
+
         # --- ファイル設定 (左パネル) ---
-        file_frame = tk.LabelFrame(left_panel, text="ファイル設定")
+        file_frame = tk.LabelFrame(plot_settings_tab, text="ファイル設定")
         file_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         file_frame.columnconfigure(0, weight=1)
 
@@ -53,7 +66,7 @@ class XRDPlotter(tk.Frame):
         self.file_listbox.grid(row=1, column=0, sticky="nsew", padx=5, pady=(0, 5))
         
         # --- グラフ設定 (左パネル) ---
-        graph_settings_frame = tk.LabelFrame(left_panel, text="グラフ設定")
+        graph_settings_frame = tk.LabelFrame(plot_settings_tab, text="グラフ設定")
         graph_settings_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         graph_settings_frame.columnconfigure(1, weight=1)
 
@@ -77,7 +90,7 @@ class XRDPlotter(tk.Frame):
         self.threshold_var.trace_add("write", self.schedule_update)
         
         # --- 参照ピーク入力 (左パネル下部) ---
-        container = tk.LabelFrame(left_panel, text="参照ピーク入力 (物質名と2θ値)")
+        container = tk.LabelFrame(plot_settings_tab, text="参照ピーク入力 (物質名と2θ値)")
         container.grid(row=2, column=0, sticky="nsew")
         container.rowconfigure(0, weight=1)
         container.columnconfigure(0, weight=1)
@@ -105,6 +118,32 @@ class XRDPlotter(tk.Frame):
             angle_entry.grid(row=i+1, column=2, padx=5, pady=2, sticky="ew")
             self.peak_angle_entries.append(angle_entry)
             angle_var.trace_add("write", self.schedule_update)
+
+        # --- エクスポート設定 (エクスポートタブ) ---
+        export_frame = tk.LabelFrame(export_tab, text="画像ファイルとして保存")
+        export_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        export_frame.columnconfigure(1, weight=1)
+
+        self.export_width_var = tk.StringVar(value="6")
+        tk.Label(export_frame, text="幅 (inch):").grid(row=0, column=0, sticky="w", padx=5, pady=2)
+        tk.Entry(export_frame, textvariable=self.export_width_var).grid(row=0, column=1, sticky="ew", padx=5, pady=2)
+
+        self.export_height_var = tk.StringVar(value="6")
+        tk.Label(export_frame, text="高さ (inch):").grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        tk.Entry(export_frame, textvariable=self.export_height_var).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+
+        self.export_format_var = tk.StringVar(value="png")
+        tk.Label(export_frame, text="形式:").grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        format_combo = ttk.Combobox(
+            export_frame,
+            textvariable=self.export_format_var,
+            values=["png", "pdf"],
+            state="readonly"
+        )
+        format_combo.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+
+        save_button = tk.Button(export_frame, text="グラフを保存", command=self.save_figure, font=("", 10, "bold"))
+        save_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=5, pady=(10, 5))
 
         # --- 右側パネル (グラフ表示) ---
         plot_panel = tk.Frame(main_pane)
@@ -140,6 +179,62 @@ class XRDPlotter(tk.Frame):
             if i < len(self.peak_name_entries):
                 self.peak_name_entries[i].insert(0, name)
                 self.peak_angle_entries[i].insert(0, angle)
+
+    def save_figure(self):
+        """現在のグラフを画像ファイルとして保存する"""
+        # 1. 現在のGUI設定値を取得
+        filepaths = self.file_listbox.get(0, tk.END)
+        if not filepaths:
+            messagebox.showwarning("警告", "保存対象のデータがありません。")
+            return
+
+        try:
+            threshold = float(self.threshold_var.get()) if self.threshold_var.get() else 0.0
+            xmin = float(self.xmin_var.get()) if self.xmin_var.get() else None
+            xmax = float(self.xmax_var.get()) if self.xmax_var.get() else None
+            width = float(self.export_width_var.get())
+            height = float(self.export_height_var.get())
+            if width <= 0 or height <= 0: raise ValueError("サイズは正の値")
+        except ValueError:
+            messagebox.showerror("エラー", "各設定値が不正です。数値が正しく入力されているか確認してください。")
+            return
+
+        reference_peaks = []
+        for i in range(len(self.peak_name_entries)):
+            name = self.peak_name_entries[i].get().strip()
+            angle_str = self.peak_angle_entries[i].get().strip()
+            if name and angle_str:
+                try:
+                    reference_peaks.append({'name': name, 'angle': float(angle_str)})
+                except ValueError:
+                    pass # 不正な値は無視
+
+        # 2. 保存先ファイルパスをユーザーに選択させる
+        file_format = self.export_format_var.get()
+        filepath = filedialog.asksaveasfilename(
+            title="グラフを保存",
+            defaultextension=f".{file_format}",
+            filetypes=[(f"{file_format.upper()} files", f"*.{file_format}"), ("All files", "*.*")]
+        )
+        if not filepath:
+            return
+
+        # 3. 新しいFigureを生成して保存 (GUIには影響しない)
+        fig, error_message = data_analyzer.create_plot_figure(
+            filepaths=filepaths,
+            threshold=threshold,
+            x_range=(xmin, xmax),
+            reference_peaks=reference_peaks,
+            figsize=(width, height)
+        )
+
+        if error_message:
+            messagebox.showerror("エラー", f"グラフの生成に失敗しました:\n{error_message}")
+            return
+
+        if fig:
+            fig.savefig(filepath, dpi=300)
+            messagebox.showinfo("成功", f"グラフを保存しました:\n{filepath}")
 
     def schedule_update(self, *args):
         """入力後、少し待ってからグラフを更新する"""
