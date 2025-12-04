@@ -17,10 +17,15 @@ class XRDPlotter(tk.Frame):
         self.pack(fill=tk.BOTH, expand=True)
 
         # --- Variables ---
-        self.peak_name_vars, self.peak_angle_vars = [], []
-        self.peak_visible_vars, self.peak_color_vars, self.peak_style_vars, self.peak_color_buttons = [], [], [], []
+        # Peak settings (lists)
+        self.peak_name_vars = []
+        self.peak_angle_vars = []
+        self.peak_visible_vars = []
+        self.peak_color_vars = []
+        self.peak_style_vars = []
+        self.peak_color_buttons = []
         
-        # Plot settings
+        # Plot settings (individual vars)
         self.xmin_var = tk.StringVar(value="30")
         self.xmax_var = tk.StringVar(value="130")
         self.threshold_var = tk.StringVar(value="1")
@@ -29,7 +34,7 @@ class XRDPlotter(tk.Frame):
         self.stack_plots_var = tk.BooleanVar(value=False)
         self.plot_spacing_var = tk.DoubleVar(value=3)
 
-        # Appearance settings
+        # Appearance settings (individual vars)
         self.xlabel_var = tk.StringVar(value="2θ/ω (degree)")
         self.ylabel_var = tk.StringVar(value="Log Intensity (arb. Units)")
         self.axis_label_fontsize_var = tk.DoubleVar(value=20)
@@ -40,8 +45,11 @@ class XRDPlotter(tk.Frame):
         self.xaxis_major_tick_spacing_var = tk.DoubleVar(value=10)
         self.show_grid_var = tk.BooleanVar(value=False)
         self.ytop_padding_factor_var = tk.DoubleVar(value=1.5)
-
-        # Analysis tools
+        self.hide_major_xtick_labels_var = tk.BooleanVar(value=False)
+        self.show_minor_xticks_var = tk.BooleanVar(value=False)
+        self.xminor_tick_spacing_var = tk.DoubleVar(value=1.0)
+        
+        # Analysis tools (individual vars)
         self.d_spacing_input_2theta_var = tk.StringVar()
         self.d_spacing_result_var = tk.StringVar(value="d-spacing (Å)")
         self.lc_input_d_var = tk.StringVar()
@@ -50,12 +58,16 @@ class XRDPlotter(tk.Frame):
         self.lc_l_var = tk.StringVar(value="1")
         self.lc_result_var = tk.StringVar(value="a = ?")
 
-        # Export settings
+        # Export settings (individual vars)
         self.export_width_var = tk.StringVar(value="6")
         self.export_height_var = tk.StringVar(value="6")
         self.export_format_var = tk.StringVar(value="png")
         
-        self._debounce_job, self.file_data, self.fig, self.ax = None, {}, None, None
+        # Internal state
+        self._debounce_job = None
+        self.file_data = {}
+        self.fig = None
+        self.ax = None
 
         self.create_widgets()
         self.preset_peaks()
@@ -69,13 +81,23 @@ class XRDPlotter(tk.Frame):
             self.spacing_entry.grid_remove()
         self.schedule_update()
 
+    def _toggle_minor_xticks_widgets(self, *args):
+        if self.show_minor_xticks_var.get():
+            self.xminor_tick_spacing_label.grid()
+            self.xminor_tick_spacing_entry.grid()
+        else:
+            self.xminor_tick_spacing_label.grid_remove()
+            self.xminor_tick_spacing_entry.grid_remove()
+        self.schedule_update()
+
     def create_widgets(self):
         main_pane = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=5)
         main_pane.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
         left_panel = tk.Frame(main_pane, width=480)
         main_pane.add(left_panel, stretch="never")
-        left_panel.rowconfigure(0, weight=1); left_panel.columnconfigure(0, weight=1)
+        left_panel.rowconfigure(0, weight=1)
+        left_panel.columnconfigure(0, weight=1)
 
         notebook = ttk.Notebook(left_panel)
         notebook.grid(row=0, column=0, sticky="nsew")
@@ -103,31 +125,79 @@ class XRDPlotter(tk.Frame):
         toolbar.update()
         
         self._toggle_spacing_widget()
+        self._toggle_minor_xticks_widgets()
 
     def build_plot_settings_tab(self, tab):
-        tab.rowconfigure(2, weight=1); tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(2, weight=1)
+        tab.columnconfigure(0, weight=1)
         
-        file_frame = tk.LabelFrame(tab, text="ファイル設定"); file_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10)); file_frame.columnconfigure(0, weight=1)
-        file_button_frame = tk.Frame(file_frame); file_button_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
-        file_button_frame.columnconfigure(0, weight=1); file_button_frame.columnconfigure(1, weight=1); file_button_frame.columnconfigure(2, weight=1)
+        file_frame = tk.LabelFrame(tab, text="ファイル設定")
+        file_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        file_frame.columnconfigure(0, weight=1)
+        file_button_frame = tk.Frame(file_frame)
+        file_button_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        file_button_frame.columnconfigure(0, weight=1)
+        file_button_frame.columnconfigure(1, weight=1)
+        file_button_frame.columnconfigure(2, weight=1)
+        
         tk.Button(file_button_frame, text="ファイルを選択", command=self.select_files).grid(row=0, column=0, sticky="ew", padx=(0, 2))
         tk.Button(file_button_frame, text="選択したファイルを削除", command=self.remove_selected_file).grid(row=0, column=1, sticky="ew", padx=(2, 0))
-        reorder_frame = tk.Frame(file_button_frame); reorder_frame.grid(row=0, column=2, rowspan=2, padx=(5,0)); tk.Button(reorder_frame, text="↑", command=self.move_file_up).pack(fill='x'); tk.Button(reorder_frame, text="↓", command=self.move_file_down).pack(fill='x')
-        listbox_frame = tk.Frame(file_frame); listbox_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=(0, 5)); listbox_frame.rowconfigure(0, weight=1); listbox_frame.columnconfigure(0, weight=1)
-        self.file_listbox = tk.Listbox(listbox_frame, selectmode=tk.SINGLE, height=6, exportselection=False); self.file_listbox.grid(row=0, column=0, sticky="nsew"); self.file_listbox.bind("<<ListboxSelect>>", self.on_file_select)
-        v_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.VERTICAL, command=self.file_listbox.yview); v_scrollbar.grid(row=0, column=1, sticky="ns"); self.file_listbox.config(yscrollcommand=v_scrollbar.set)
-        h_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.HORIZONTAL, command=self.file_listbox.xview); h_scrollbar.grid(row=1, column=0, sticky="ew"); self.file_listbox.config(xscrollcommand=h_scrollbar.set)
+        
+        reorder_frame = tk.Frame(file_button_frame)
+        reorder_frame.grid(row=0, column=2, rowspan=2, padx=(5,0))
+        tk.Button(reorder_frame, text="↑", command=self.move_file_up).pack(fill='x')
+        tk.Button(reorder_frame, text="↓", command=self.move_file_down).pack(fill='x')
+        
+        listbox_frame = tk.Frame(file_frame)
+        listbox_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=(0, 5))
+        listbox_frame.rowconfigure(0, weight=1)
+        listbox_frame.columnconfigure(0, weight=1)
+        self.file_listbox = tk.Listbox(listbox_frame, selectmode=tk.SINGLE, height=6, exportselection=False)
+        self.file_listbox.grid(row=0, column=0, sticky="nsew")
+        self.file_listbox.bind("<<ListboxSelect>>", self.on_file_select)
+        v_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.VERTICAL, command=self.file_listbox.yview)
+        v_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.file_listbox.config(yscrollcommand=v_scrollbar.set)
+        h_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.HORIZONTAL, command=self.file_listbox.xview)
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
+        self.file_listbox.config(xscrollcommand=h_scrollbar.set)
 
-        graph_settings_frame = tk.LabelFrame(tab, text="グラフ設定"); graph_settings_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10)); graph_settings_frame.columnconfigure(1, weight=1)
-        tk.Label(graph_settings_frame, text="横軸 最小値:").grid(row=0, column=0, sticky="w", padx=5, pady=2); self.xmin_entry = tk.Entry(graph_settings_frame, textvariable=self.xmin_var); self.xmin_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(graph_settings_frame, text="横軸 最大値:").grid(row=1, column=0, sticky="w", padx=5, pady=2); self.xmax_entry = tk.Entry(graph_settings_frame, textvariable=self.xmax_var); self.xmax_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(graph_settings_frame, text="強度しきい値:").grid(row=2, column=0, sticky="w", padx=5, pady=2); tk.Entry(graph_settings_frame, textvariable=self.threshold_var).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(graph_settings_frame, text="凡例名:").grid(row=3, column=0, sticky="w", padx=5, pady=2); self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled"); self.legend_name_entry.grid(row=3, column=1, sticky="ew", padx=5, pady=2)
-        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.toggle_legend_visibility); self.show_legend_check.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        graph_settings_frame = tk.LabelFrame(tab, text="グラフ設定")
+        graph_settings_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+        graph_settings_frame.columnconfigure(1, weight=1)
+        
+        tk.Label(graph_settings_frame, text="横軸 最小値:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
+        self.xmin_entry = tk.Entry(graph_settings_frame, textvariable=self.xmin_var)
+        self.xmin_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
+        
+        tk.Label(graph_settings_frame, text="横軸 最大値:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        self.xmax_entry = tk.Entry(graph_settings_frame, textvariable=self.xmax_var)
+        self.xmax_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        
+        tk.Label(graph_settings_frame, text="強度しきい値:").grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        self.threshold_entry = tk.Entry(graph_settings_frame, textvariable=self.threshold_var)
+        self.threshold_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        
+        tk.Label(graph_settings_frame, text="凡例名:").grid(row=3, column=0, sticky="w", padx=5, pady=2)
+        self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled")
+        self.legend_name_entry.grid(row=3, column=1, sticky="ew", padx=5, pady=2)
+        
+        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.toggle_legend_visibility)
+        self.show_legend_check.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        
         tk.Checkbutton(graph_settings_frame, text="グラフを縦に並べる", variable=self.stack_plots_var, command=self._toggle_spacing_widget).grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=2)
-        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n):"); self.spacing_label.grid(row=6, column=0, sticky="w", padx=5, pady=2)
-        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
-        self.xmin_entry.bind("<FocusOut>", self.schedule_update); self.xmin_entry.bind("<Return>", self.schedule_update); self.xmax_entry.bind("<FocusOut>", self.schedule_update); self.xmax_entry.bind("<Return>", self.schedule_update); self.threshold_var.trace_add("write", self.schedule_update); self.legend_name_var.trace_add("write", self.on_legend_name_change)
+        
+        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n):")
+        self.spacing_label.grid(row=6, column=0, sticky="w", padx=5, pady=2)
+        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update)
+        self.spacing_entry.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
+        
+        self.xmin_entry.bind("<FocusOut>", self.schedule_update)
+        self.xmin_entry.bind("<Return>", self.schedule_update)
+        self.xmax_entry.bind("<FocusOut>", self.schedule_update)
+        self.xmax_entry.bind("<Return>", self.schedule_update)
+        self.threshold_var.trace_add("write", self.schedule_update)
+        self.legend_name_var.trace_add("write", self.on_legend_name_change)
 
         container = tk.LabelFrame(tab, text="参照ピーク設定"); container.grid(row=2, column=0, sticky="nsew"); container.rowconfigure(0, weight=1); container.columnconfigure(0, weight=1)
         canvas = tk.Canvas(container, borderwidth=0, highlightthickness=0); canvas.grid(row=0, column=0, sticky="nsew"); scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview); scrollbar.grid(row=0, column=1, sticky="ns"); canvas.configure(yscrollcommand=scrollbar.set); self.peak_frame = tk.Frame(canvas); canvas.create_window((0, 0), window=self.peak_frame, anchor="nw"); self.peak_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))); self.peak_frame.columnconfigure(2, weight=1); self.peak_frame.columnconfigure(3, weight=1)
@@ -144,8 +214,7 @@ class XRDPlotter(tk.Frame):
             widget.grid(row=row, column=1, sticky="ew", padx=5, pady=2)
             if isinstance(widget, (ttk.Spinbox, tk.Scale)): widget.configure(command=lambda *args: self.schedule_update())
             elif isinstance(widget, tk.Entry): var.trace_add("write", self.schedule_update)
-        create_row(appearance_frame, "X軸ラベル:", self.xlabel_var, 0)
-        create_row(appearance_frame, "Y軸ラベル:", self.ylabel_var, 1)
+        create_row(appearance_frame, "X軸ラベル:", self.xlabel_var, 0); create_row(appearance_frame, "Y軸ラベル:", self.ylabel_var, 1)
         create_row(appearance_frame, "軸ラベルフォントサイズ:", self.axis_label_fontsize_var, 2, ttk.Spinbox, from_=1, to=100)
         create_row(appearance_frame, "目盛りフォントサイズ:", self.tick_label_fontsize_var, 3, ttk.Spinbox, from_=1, to=100)
         create_row(appearance_frame, "凡例フォントサイズ:", self.legend_fontsize_var, 4, ttk.Spinbox, from_=1, to=100)
@@ -155,6 +224,10 @@ class XRDPlotter(tk.Frame):
         dir_combo = ttk.Combobox(appearance_frame, textvariable=self.tick_direction_var, values=['in', 'out', 'inout'], state="readonly"); dir_combo.grid(row=7, column=1, sticky="ew", padx=5, pady=2); dir_combo.bind("<<ComboboxSelected>>", self.schedule_update)
         create_row(appearance_frame, "Y軸上部パディング係数:", self.ytop_padding_factor_var, 8, ttk.Spinbox, from_=1, to=20, increment=0.1)
         tk.Checkbutton(appearance_frame, text="グリッドを表示", variable=self.show_grid_var, command=self.schedule_update).grid(row=9, column=0, columnspan=2, sticky="w", pady=2)
+        tk.Checkbutton(appearance_frame, text="X軸主目盛りラベルを非表示", variable=self.hide_major_xtick_labels_var, command=self.schedule_update).grid(row=10, column=0, columnspan=2, sticky="w", pady=2)
+        tk.Checkbutton(appearance_frame, text="X軸補助目盛りを表示", variable=self.show_minor_xticks_var, command=self._toggle_minor_xticks_widgets).grid(row=11, column=0, columnspan=2, sticky="w", pady=2)
+        self.xminor_tick_spacing_label = tk.Label(appearance_frame, text="X軸補助目盛り間隔:"); self.xminor_tick_spacing_label.grid(row=12, column=0, sticky="w", padx=5, pady=2)
+        self.xminor_tick_spacing_entry = ttk.Spinbox(appearance_frame, textvariable=self.xminor_tick_spacing_var, from_=0.1, to=10, increment=0.1, command=self.schedule_update); self.xminor_tick_spacing_entry.grid(row=12, column=1, sticky="ew", padx=5, pady=2)
 
     def build_analysis_tab(self, tab):
         analysis_frame = tk.Frame(tab, padx=10, pady=10); analysis_frame.pack(fill="x")
@@ -174,7 +247,7 @@ class XRDPlotter(tk.Frame):
     def build_export_tab(self, tab):
         export_frame = tk.LabelFrame(tab, text="画像ファイルとして保存"); export_frame.pack(fill="x", padx=10, pady=10)
         export_frame.columnconfigure(1, weight=1)
-        tk.Label(export_frame, text="幅 (inch):").grid(row=0, column=0, sticky="w", padx=5, pady=2); tk.Entry(export_frame, textvariable=self.export_width_var).grid(row=0, column=1, sticky="ew", padx=5, pady=2)
+        self.export_width_var = tk.StringVar(value="6"); tk.Label(export_frame, text="幅 (inch):").grid(row=0, column=0, sticky="w", padx=5, pady=2); tk.Entry(export_frame, textvariable=self.export_width_var).grid(row=0, column=1, sticky="ew", padx=5, pady=2)
         tk.Label(export_frame, text="高さ (inch):").grid(row=1, column=0, sticky="w", padx=5, pady=2); tk.Entry(export_frame, textvariable=self.export_height_var).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
         tk.Label(export_frame, text="形式:").grid(row=2, column=0, sticky="w", padx=5, pady=2); ttk.Combobox(export_frame, textvariable=self.export_format_var, values=["png", "pdf"], state="readonly").grid(row=2, column=1, sticky="ew", padx=5, pady=2)
         tk.Button(export_frame, text="グラフを保存", command=self.save_figure, font=("", 10, "bold")).grid(row=3, column=0, columnspan=2, sticky="ew", padx=5, pady=(10, 5))
@@ -221,7 +294,21 @@ class XRDPlotter(tk.Frame):
         except ValueError: messagebox.showwarning("警告", "グラフ設定の数値が不正です。"); return
         reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_name_vars[i].get().strip() and self.peak_angle_vars[i].get().strip()]
         plot_data = [{'filepath': fp, 'label': self.file_data[fp]} for fp in filepaths if fp in self.file_data]
-        appearance_settings = {'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 'axis_label_fontsize': self.axis_label_fontsize_var.get(), 'tick_label_fontsize': self.tick_label_fontsize_var.get(), 'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(), 'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get(), 'ytop_padding_factor': self.ytop_padding_factor_var.get()}
+        appearance_settings = {
+            'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 
+            'axis_label_fontsize': self.axis_label_fontsize_var.get(), 
+            'tick_label_fontsize': self.tick_label_fontsize_var.get(), 
+            'legend_fontsize': self.legend_fontsize_var.get(), 
+            'linewidth': self.plot_linewidth_var.get(), 
+            'tick_direction': self.tick_direction_var.get(), 
+            'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 
+            'show_grid': self.show_grid_var.get(),
+            'ytop_padding_factor': self.ytop_padding_factor_var.get(),
+            'hide_major_xtick_labels': self.hide_major_xtick_labels_var.get(),
+            'show_minor_xticks': self.show_minor_xticks_var.get(),
+            'xminor_tick_spacing': self.xminor_tick_spacing_var.get()
+        }
+
         self.fig.clear(); self.ax = self.fig.add_subplot(111)
         error_message = data_analyzer.draw_plot(ax=self.ax, plot_data=plot_data, threshold=threshold, x_range=(xmin, xmax), reference_peaks=reference_peaks, show_legend=self.show_legend_var.get(), stack=self.stack_plots_var.get(), spacing=spacing, appearance=appearance_settings)
         if error_message: messagebox.showinfo("情報", error_message)
@@ -269,7 +356,7 @@ class XRDPlotter(tk.Frame):
 
     def save_figure(self):
         if not self.ax or not self.ax.lines:
-            messagebox.showwarning("警告", "保存対象のデータがありません。সম্পন্ন")
+            messagebox.showwarning("警告", "保存対象のデータがありません。")
             return
         try:
             width = float(self.export_width_var.get())
