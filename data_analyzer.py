@@ -32,29 +32,40 @@ def parse_ras_file(filepath: str) -> Tuple[Optional[List[float]], Optional[List[
 def _draw_reference_peaks(ax: plt.Axes, peaks_to_plot: List[Dict[str, Any]]):
     """
     指定された軸に参照ピークの垂直線とラベルを描画する。
+    ピークの表示/非表示、色、線種は渡されたデータに従う。
     """
     if not peaks_to_plot:
         return
 
     ymin, ymax = ax.get_ylim()
 
-    unique_names = sorted(list(set([p['name'] for p in peaks_to_plot])))
-    dark_colors = ['#8B0000', '#00008B', '#006400', '#8B008B', '#FF8C00', '#483D8B', '#B22222', '#008B8B', '#556B2F', '#9932CC']
-    color_map = {name: dark_colors[i % len(dark_colors)] for i, name in enumerate(unique_names)}
-
     for peak in peaks_to_plot:
-        name, angle = peak['name'], peak['angle']
-        color = color_map[name]
-        ax.axvline(x=angle, color=color, linestyle='--', linewidth=1.2)
-        y_pos = ymax * 0.95
-        ax.text(angle + 0.2, y_pos, name, rotation=90, verticalalignment='top', horizontalalignment='left', color=color, fontsize=10, fontweight='bold')
+        # 'visible' フラグが False または存在しない場合はスキップ
+        if not peak.get('visible', False):
+            continue
+
+        name = peak.get('name', '')
+        angle = peak.get('angle')
+        color = peak.get('color', 'black') # デフォルトは黒
+        linestyle = peak.get('linestyle', '--') # デフォルトは破線
+
+        if angle is None:
+            continue
+
+        ax.axvline(x=angle, color=color, linestyle=linestyle, linewidth=1.2)
+        
+        # y位置を少し調整して見やすくする
+        y_pos = ymax * 0.9
+        ax.text(angle + 0.2, y_pos, name, rotation=90, verticalalignment='top', 
+                horizontalalignment='left', color=color, fontsize=10, fontweight='bold')
 
 def create_plot_figure(
-    filepaths: List[str],
+    plot_data: List[Dict[str, str]],
     threshold: float,
     x_range: Tuple[Optional[float], Optional[float]],
     reference_peaks: List[Dict[str, Any]],
-    figsize: Tuple[float, float] = (16, 9)
+    figsize: Tuple[float, float] = (16, 9),
+    show_legend: bool = True
 ) -> Tuple[Optional[plt.Figure], Optional[str]]:
     """
     XRDデータからmatplotlibのFigureオブジェクトを生成する。
@@ -67,10 +78,11 @@ def create_plot_figure(
     has_data_to_plot = False
     parse_errors = []
 
-    for filepath in filepaths:
+    for item in plot_data:
+        filepath = item['filepath']
         angles, intensities = parse_ras_file(filepath)
         if angles is None or intensities is None:
-            parse_errors.append(filepath)
+            parse_errors.append(os.path.basename(filepath))
             continue
 
         filtered_data = [(a, inten) for a, inten in zip(angles, intensities) if inten >= threshold]
@@ -79,7 +91,7 @@ def create_plot_figure(
 
         has_data_to_plot = True
         angles, intensities = zip(*filtered_data)
-        ax.plot(angles, intensities, label=os.path.basename(filepath))
+        ax.plot(angles, intensities, label=item['label'])
 
     if parse_errors:
         error_files = "\n".join(parse_errors)
@@ -97,10 +109,11 @@ def create_plot_figure(
 
     _draw_reference_peaks(ax, reference_peaks)
 
-    xmin, xmax = x_range
+    if show_legend:
+        leg = ax.legend()
+        if leg:
+            leg.set_draggable(True)
     ax.set_xlim(xmin, xmax)
-
-    ax.legend()
     ax.grid(True, which="both", ls="--", linewidth=0.5, axis='x')
     ax.yaxis.grid(False)
     ax.set_yticklabels([])
@@ -110,10 +123,11 @@ def create_plot_figure(
 
 def draw_plot_on_axes(
     ax: plt.Axes,
-    filepaths: List[str],
+    plot_data: List[Dict[str, str]],
     threshold: float,
     x_range: Tuple[Optional[float], Optional[float]],
-    reference_peaks: List[Dict[str, Any]]
+    reference_peaks: List[Dict[str, Any]],
+    show_legend: bool = True
 ) -> Optional[str]:
     """
     指定されたmatplotlibのAxesにXRDデータを描画する。
@@ -125,10 +139,11 @@ def draw_plot_on_axes(
     has_data_to_plot = False
     parse_errors = []
 
-    for filepath in filepaths:
+    for item in plot_data:
+        filepath = item['filepath']
         angles, intensities = parse_ras_file(filepath)
         if angles is None or intensities is None:
-            parse_errors.append(filepath)
+            parse_errors.append(os.path.basename(filepath))
             continue
 
         filtered_data = [(a, inten) for a, inten in zip(angles, intensities) if inten >= threshold]
@@ -137,7 +152,7 @@ def draw_plot_on_axes(
 
         has_data_to_plot = True
         angles, intensities = zip(*filtered_data)
-        ax.plot(angles, intensities, label=os.path.basename(filepath))
+        ax.plot(angles, intensities, label=item['label'])
 
     if parse_errors:
         return f"以下のファイルの読み込みに失敗しました:\n" + "\n".join(parse_errors)
@@ -148,7 +163,10 @@ def draw_plot_on_axes(
     ax.set_ylim(bottom=threshold if threshold > 0 else 1)
     _draw_reference_peaks(ax, reference_peaks)
     ax.set_xlim(x_range[0], x_range[1])
-    ax.legend()
+    if show_legend:
+        leg = ax.legend()
+        if leg:
+            leg.set_draggable(True)
     ax.grid(True, which="both", ls="--", linewidth=0.5, axis='x')
     ax.yaxis.grid(False)
     ax.set_yticklabels([])
