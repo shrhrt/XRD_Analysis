@@ -19,7 +19,7 @@ class XRDPlotter(tk.Frame):
         self.peak_visible_vars, self.peak_color_vars, self.peak_style_vars, self.peak_color_buttons = [], [], [], []
         
         self.stack_plots_var = tk.BooleanVar(value=False)
-        self.plot_spacing_var = tk.DoubleVar(value=2)
+        self.plot_spacing_var = tk.DoubleVar(value=3) # 初期値を3に変更
         
         self.xlabel_var = tk.StringVar(value="2θ/ω (degree)")
         self.ylabel_var = tk.StringVar(value="Log Intensity (arb. Units)")
@@ -30,6 +30,8 @@ class XRDPlotter(tk.Frame):
         self.tick_direction_var = tk.StringVar(value='in')
         self.xaxis_major_tick_spacing_var = tk.DoubleVar(value=10)
         self.show_grid_var = tk.BooleanVar(value=False)
+        self.threshold_var = tk.StringVar(value="1") # 初期値を1に変更
+        self.ytop_padding_factor_var = tk.DoubleVar(value=1.5) # Y軸上部パディング係数
 
         self._debounce_job, self.file_data, self.fig, self.ax = None, {}, None, None
 
@@ -60,17 +62,21 @@ class XRDPlotter(tk.Frame):
         notebook.add(appearance_tab, text="外観設定")
         notebook.add(export_tab, text="エクスポート")
 
-        # --- プロット設定タブ ---
         plot_settings_tab.rowconfigure(2, weight=1); plot_settings_tab.columnconfigure(0, weight=1)
         
+        # File Frame
         file_frame = tk.LabelFrame(plot_settings_tab, text="ファイル設定")
         file_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         file_frame.columnconfigure(0, weight=1)
         file_button_frame = tk.Frame(file_frame)
         file_button_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
-        file_button_frame.columnconfigure(0, weight=1); file_button_frame.columnconfigure(1, weight=1)
+        file_button_frame.columnconfigure(0, weight=1); file_button_frame.columnconfigure(1, weight=1); file_button_frame.columnconfigure(2, weight=1) # 順序変更ボタン用に列を追加
         tk.Button(file_button_frame, text="ファイルを選択", command=self.select_files).grid(row=0, column=0, sticky="ew", padx=(0, 2))
         tk.Button(file_button_frame, text="選択したファイルを削除", command=self.remove_selected_file).grid(row=0, column=1, sticky="ew", padx=(2, 0))
+        tk.Button(file_button_frame, text="上へ", command=self.move_file_up).grid(row=0, column=2, sticky="ew", padx=(2, 0))
+        tk.Button(file_button_frame, text="下へ", command=self.move_file_down).grid(row=1, column=2, sticky="ew", padx=(2, 0))
+
+
         listbox_frame = tk.Frame(file_frame)
         listbox_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=(0, 5))
         listbox_frame.rowconfigure(0, weight=1); listbox_frame.columnconfigure(0, weight=1)
@@ -82,6 +88,7 @@ class XRDPlotter(tk.Frame):
         h_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.HORIZONTAL, command=self.file_listbox.xview)
         h_scrollbar.grid(row=1, column=0, sticky="ew"); self.file_listbox.config(xscrollcommand=h_scrollbar.set)
 
+        # Graph Settings Frame
         graph_settings_frame = tk.LabelFrame(plot_settings_tab, text="グラフ設定")
         graph_settings_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         graph_settings_frame.columnconfigure(1, weight=1)
@@ -89,8 +96,8 @@ class XRDPlotter(tk.Frame):
         self.xmin_entry = tk.Entry(graph_settings_frame, textvariable=self.xmin_var); self.xmin_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
         self.xmax_var = tk.StringVar(value="130"); tk.Label(graph_settings_frame, text="横軸 最大値:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
         self.xmax_entry = tk.Entry(graph_settings_frame, textvariable=self.xmax_var); self.xmax_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-        self.threshold_var = tk.StringVar(value="0"); tk.Label(graph_settings_frame, text="強度しきい値:").grid(row=2, column=0, sticky="w", padx=5, pady=2)
-        self.threshold_entry = tk.Entry(graph_settings_frame, textvariable=self.threshold_var); self.threshold_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(graph_settings_frame, text="強度しきい値:").grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        tk.Entry(graph_settings_frame, textvariable=self.threshold_var).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
         self.legend_name_var = tk.StringVar(); tk.Label(graph_settings_frame, text="凡例名:").grid(row=3, column=0, sticky="w", padx=5, pady=2)
         self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled"); self.legend_name_entry.grid(row=3, column=1, sticky="ew", padx=5, pady=2)
         self.show_legend_var = tk.BooleanVar(value=True); self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.toggle_legend_visibility); self.show_legend_check.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=2)
@@ -118,7 +125,6 @@ class XRDPlotter(tk.Frame):
             color_var = tk.StringVar(value="#000000"); color_button = tk.Button(self.peak_frame, text="■", width=2, relief=tk.SUNKEN, command=self._create_color_picker_command(i)); color_button.grid(row=i+1, column=4, padx=2, pady=2); self.peak_color_vars.append(color_var); self.peak_color_buttons.append(color_button)
             style_var = tk.StringVar(value=linestyle_map["破線"]); style_combo = ttk.Combobox(self.peak_frame, values=list(linestyle_map.keys()), width=6, state="readonly"); style_combo.set("破線"); style_combo.bind("<<ComboboxSelected>>", lambda e, v=style_var, c=style_combo, m=linestyle_map: (v.set(m[c.get()]), self.schedule_update())); style_combo.grid(row=i+1, column=5, padx=(2,5), pady=2); self.peak_style_vars.append(style_var)
 
-        # --- 外観設定タブ ---
         appearance_frame = tk.Frame(appearance_tab, padx=10, pady=10); appearance_frame.pack(fill="x"); appearance_frame.columnconfigure(1, weight=1)
         def create_appearance_row(parent, label_text, var, row, widget_class=tk.Entry, **widget_args):
             tk.Label(parent, text=label_text).grid(row=row, column=0, sticky="w", pady=2)
@@ -133,11 +139,11 @@ class XRDPlotter(tk.Frame):
         create_appearance_row(appearance_frame, "凡例フォントサイズ:", self.legend_fontsize_var, 4, ttk.Spinbox, from_=1, to=100)
         create_appearance_row(appearance_frame, "データ線の太さ:", self.plot_linewidth_var, 5, ttk.Spinbox, from_=0.1, to=10, increment=0.1)
         create_appearance_row(appearance_frame, "X軸主目盛り間隔:", self.xaxis_major_tick_spacing_var, 6, ttk.Spinbox, from_=1, to=100)
-        tk.Label(appearance_frame, text="目盛りの向き:").grid(row=7, column=0, sticky="w", pady=2)
+        tk.Label(appearance_frame, text="X軸目盛りの向き:").grid(row=7, column=0, sticky="w", pady=2)
         dir_combo = ttk.Combobox(appearance_frame, textvariable=self.tick_direction_var, values=['in', 'out', 'inout'], state="readonly"); dir_combo.grid(row=7, column=1, sticky="ew", padx=5, pady=2); dir_combo.bind("<<ComboboxSelected>>", self.schedule_update)
-        tk.Checkbutton(appearance_frame, text="グリッドを表示", variable=self.show_grid_var, command=self.schedule_update).grid(row=8, column=0, columnspan=2, sticky="w", pady=2)
+        create_appearance_row(appearance_frame, "Y軸上部パディング係数:", self.ytop_padding_factor_var, 8, ttk.Spinbox, from_=1, to=20, increment=0.1)
+        tk.Checkbutton(appearance_frame, text="グリッドを表示", variable=self.show_grid_var, command=self.schedule_update).grid(row=9, column=0, columnspan=2, sticky="w", pady=2)
 
-        # --- エクスポートタブ ---
         export_frame = tk.LabelFrame(export_tab, text="画像ファイルとして保存"); export_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
         export_frame.columnconfigure(1, weight=1)
         self.export_width_var = tk.StringVar(value="6"); tk.Label(export_frame, text="幅 (inch):").grid(row=0, column=0, sticky="w", padx=5, pady=2); tk.Entry(export_frame, textvariable=self.export_width_var).grid(row=0, column=1, sticky="ew", padx=5, pady=2)
@@ -173,7 +179,17 @@ class XRDPlotter(tk.Frame):
 
         reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_name_vars[i].get().strip() and self.peak_angle_vars[i].get().strip()]
         plot_data = [{'filepath': fp, 'label': self.file_data[fp]} for fp in filepaths if fp in self.file_data]
-        appearance_settings = {'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 'axis_label_fontsize': self.axis_label_fontsize_var.get(), 'tick_label_fontsize': self.tick_label_fontsize_var.get(), 'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(), 'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get()}
+        appearance_settings = {
+            'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 
+            'axis_label_fontsize': self.axis_label_fontsize_var.get(), 
+            'tick_label_fontsize': self.tick_label_fontsize_var.get(), 
+            'legend_fontsize': self.legend_fontsize_var.get(), 
+            'linewidth': self.plot_linewidth_var.get(), 
+            'tick_direction': self.tick_direction_var.get(), 
+            'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 
+            'show_grid': self.show_grid_var.get(),
+            'ytop_padding_factor': self.ytop_padding_factor_var.get()
+        }
 
         self.fig.clear(); self.ax = self.fig.add_subplot(111)
         error_message = data_analyzer.draw_plot(ax=self.ax, plot_data=plot_data, threshold=threshold, x_range=(xmin, xmax), reference_peaks=reference_peaks, show_legend=self.show_legend_var.get(), stack=self.stack_plots_var.get(), spacing=spacing, appearance=appearance_settings)
@@ -201,8 +217,30 @@ class XRDPlotter(tk.Frame):
             self.file_listbox.selection_set(new_selection_index); self.on_file_select(None)
         self.schedule_update()
 
+    def move_file_up(self):
+        selected_indices = self.file_listbox.curselection()
+        if not selected_indices: return
+        idx = selected_indices[0]
+        if idx > 0:
+            filepath = self.file_listbox.get(idx)
+            self.file_listbox.delete(idx)
+            self.file_listbox.insert(idx - 1, filepath)
+            self.file_listbox.selection_set(idx - 1)
+            self.schedule_update()
+
+    def move_file_down(self):
+        selected_indices = self.file_listbox.curselection()
+        if not selected_indices: return
+        idx = selected_indices[0]
+        if idx < self.file_listbox.size() - 1:
+            filepath = self.file_listbox.get(idx)
+            self.file_listbox.delete(idx)
+            self.file_listbox.insert(idx + 1, filepath)
+            self.file_listbox.selection_set(idx + 1)
+            self.schedule_update()
+
     def preset_peaks(self):
-        initial_peaks = [{"name": "LiTi2O4", "angle": "116.728", "visible": True, "color": "#8B0000", "style": "--"}, {"name": "Li4Ti5O12", "angle": "117.746", "visible": True, "color": "#00008B", "style": "--"}, {"name": "TiO2", "angle": "25.3", "visible": False, "color": "#006400", "style": ":"}]
+        initial_peaks = [{"name": "LiTi2O4", "angle": "116.728", "visible": False, "color": "#8B0000", "style": "--"}, {"name": "Li4Ti5O12", "angle": "117.746", "visible": False, "color": "#00008B", "style": "--"}, {"name": "TiO2", "angle": "25.3", "visible": False, "color": "#006400", "style": ":"}]
         linestyle_map_inv = {"-": "実線", "--": "破線", ":": "点線", "-.": "一点鎖線"}
         for i, peak_data in enumerate(initial_peaks):
             if i < 10:
