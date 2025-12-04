@@ -86,11 +86,6 @@ def draw_plot(
             
             ax.plot(angles, plot_intensities, label=item['label'])
             all_intensities.extend(plot_intensities)
-
-            # ラベルをテキストとしてプロット
-            label_y_pos = min_intensity * current_multiplier
-            ax.text((x_range[0] or min(angles)) + 1, label_y_pos, f"  {item['label']}", 
-                    verticalalignment='bottom', fontsize=9, color='gray')
             
             current_multiplier *= (10**spacing) # spacingは10のべき乗として扱う
 
@@ -125,13 +120,14 @@ def draw_plot(
     if stack:
         ax.set_yticks([])
         ax.set_yticklabels([])
-        ax.set_ylabel("")
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_visible(False)
+        ax.set_ylabel("Log Intensity (arb. Units)") # Y軸ラベルを表示
         ax.set_ylim(bottom=min(all_intensities)*0.9, top=max(all_intensities) * 1.5)
+        if show_legend: # スタックモードでも凡例を表示
+            leg = ax.legend(loc='upper right', bbox_to_anchor=(1.0, 1.0)) # 凡例位置を調整
+            if leg:
+                leg.set_draggable(True)
     else:
-        ax.set_ylabel("Log Intensity (a.u.)")
+        ax.set_ylabel("Log Intensity (arb. Units)")
         ax.set_ylim(bottom=min(all_intensities), top=max(all_intensities) * 1.5)
         ax.yaxis.grid(False)
         ax.set_yticklabels([])

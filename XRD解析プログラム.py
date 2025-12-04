@@ -44,11 +44,9 @@ class XRDPlotter(tk.Frame):
         if is_stack_mode:
             self.spacing_label.grid()
             self.spacing_entry.grid()
-            self.show_legend_check.config(state="disabled")
         else:
             self.spacing_label.grid_remove()
             self.spacing_entry.grid_remove()
-            self.show_legend_check.config(state="normal")
         self.schedule_update()
 
     def create_widgets(self):
@@ -133,9 +131,13 @@ class XRDPlotter(tk.Frame):
                                         orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1,
                                         command=self.schedule_update)
         self.spacing_entry.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
+
+        # イベントハンドラの設定
+        self.xmin_entry.bind("<FocusOut>", self.schedule_update)
+        self.xmin_entry.bind("<Return>", self.schedule_update)
+        self.xmax_entry.bind("<FocusOut>", self.schedule_update)
+        self.xmax_entry.bind("<Return>", self.schedule_update)
         
-        self.xmin_var.trace_add("write", self.schedule_update)
-        self.xmax_var.trace_add("write", self.schedule_update)
         self.threshold_var.trace_add("write", self.schedule_update)
         self.legend_name_var.trace_add("write", self.on_legend_name_change)
         # self.plot_spacing_var.trace_add("write", self.schedule_update) # Scaleのcommandで実行
