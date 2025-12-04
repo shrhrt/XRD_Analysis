@@ -53,6 +53,8 @@ class XRDPlotter(tk.Frame):
         self.ytop_padding_factor_var = tk.DoubleVar(value=1.5)
         self.hide_major_xtick_labels_var, self.show_minor_xticks_var = tk.BooleanVar(value=False), tk.BooleanVar(value=False)
         self.xminor_tick_spacing_var = tk.DoubleVar(value=1.0)
+        self.peak_label_fontsize_var = tk.DoubleVar(value=9)
+        self.peak_label_offset_var = tk.DoubleVar(value=0.4)
         self.d_spacing_input_2theta_var, self.d_spacing_result_var = tk.StringVar(), tk.StringVar(value="d-spacing (Å)")
         self.lc_input_d_var, self.lc_h_var, self.lc_k_var, self.lc_l_var = tk.StringVar(), tk.StringVar(value="1"), tk.StringVar(value="0"), tk.StringVar(value="0")
         self.lc_result_var = tk.StringVar(value="a = ?")
@@ -70,35 +72,24 @@ class XRDPlotter(tk.Frame):
         main_pane = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=5)
         main_pane.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
-        left_panel = tk.Frame(main_pane, width=480)
-        main_pane.add(left_panel, stretch="never")
-        left_panel.rowconfigure(0, weight=1)
-        left_panel.columnconfigure(0, weight=1)
+        left_panel = tk.Frame(main_pane, width=480); main_pane.add(left_panel, stretch="never")
+        left_panel.rowconfigure(0, weight=1); left_panel.columnconfigure(0, weight=1)
 
-        notebook = ttk.Notebook(left_panel)
-        notebook.grid(row=0, column=0, sticky="nsew")
+        notebook = ttk.Notebook(left_panel); notebook.grid(row=0, column=0, sticky="nsew")
         plot_settings_tab, appearance_tab, analysis_tab, export_tab = tk.Frame(notebook), tk.Frame(notebook), tk.Frame(notebook), tk.Frame(notebook)
-        notebook.add(plot_settings_tab, text="プロット設定")
-        notebook.add(appearance_tab, text="外観設定")
-        notebook.add(analysis_tab, text="解析ツール")
-        notebook.add(export_tab, text="エクスポート")
+        notebook.add(plot_settings_tab, text="プロット設定"); notebook.add(appearance_tab, text="外観設定"); notebook.add(analysis_tab, text="解析ツール"); notebook.add(export_tab, text="エクスポート")
         
         self.build_plot_settings_tab(plot_settings_tab)
         self.build_appearance_tab(appearance_tab)
         self.build_analysis_tab(analysis_tab)
         self.build_export_tab(export_tab)
 
-        plot_panel = tk.Frame(main_pane)
-        main_pane.add(plot_panel, stretch="always")
-        self.canvas = FigureCanvasTkAgg(self.fig, master=plot_panel)
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        toolbar = NavigationToolbar2Tk(self.canvas, plot_panel)
-        toolbar.update()
+        plot_panel = tk.Frame(main_pane); main_pane.add(plot_panel, stretch="always")
+        self.canvas = FigureCanvasTkAgg(self.fig, master=plot_panel); self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        toolbar = NavigationToolbar2Tk(self.canvas, plot_panel); toolbar.update()
         
-        self._toggle_spacing_widget()
-        self._toggle_minor_xticks_widgets()
-        self.update_plot()
-        
+        self._toggle_spacing_widget(); self._toggle_minor_xticks_widgets(); self.update_plot()
+
     def build_plot_settings_tab(self, tab):
         tab.rowconfigure(2, weight=1); tab.columnconfigure(0, weight=1)
         file_frame = tk.LabelFrame(tab, text="ファイル設定"); file_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10)); file_frame.columnconfigure(0, weight=1)
@@ -122,20 +113,30 @@ class XRDPlotter(tk.Frame):
         self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
         self.xmin_entry.bind("<FocusOut>", self.schedule_update); self.xmin_entry.bind("<Return>", self.schedule_update); self.xmax_entry.bind("<FocusOut>", self.schedule_update); self.xmax_entry.bind("<Return>", self.schedule_update); self.threshold_var.trace_add("write", self.schedule_update); self.legend_name_var.trace_add("write", self.on_legend_name_change)
         
-        container = tk.LabelFrame(tab, text="参照ピーク設定"); container.grid(row=2, column=0, sticky="nsew"); container.rowconfigure(1, weight=1); container.columnconfigure(0, weight=1)
+        container = tk.LabelFrame(tab, text="参照ピーク設定"); container.grid(row=2, column=0, sticky="nsew"); container.rowconfigure(2, weight=1); container.columnconfigure(0, weight=1)
         preset_frame = tk.Frame(container); preset_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=(5,0)); preset_frame.columnconfigure(1, weight=1)
         tk.Label(preset_frame, text="プリセット読込:").grid(row=0, column=0, sticky="w")
         menubutton = tk.Menubutton(preset_frame, text="物質を選択...", relief=tk.RAISED, anchor="w")
         menubutton.grid(row=0, column=1, sticky="ew")
         self._build_peak_preset_menu(menubutton)
-        canvas_container = tk.Frame(container); canvas_container.grid(row=1, column=0, sticky="nsew"); canvas_container.rowconfigure(0, weight=1); canvas_container.columnconfigure(0, weight=1)
+        
+        peak_opts_frame = tk.Frame(container)
+        peak_opts_frame.grid(row=1, column=0, sticky="ew", padx=5)
+        peak_opts_frame.columnconfigure(1, weight=1)
+        peak_opts_frame.columnconfigure(3, weight=1)
+        tk.Label(peak_opts_frame, text="フォントサイズ:").grid(row=0, column=0, sticky="w")
+        ttk.Spinbox(peak_opts_frame, textvariable=self.peak_label_fontsize_var, from_=1, to=100, command=self.schedule_update, width=5).grid(row=0, column=1, sticky="w")
+        tk.Label(peak_opts_frame, text="ラベルオフセット:").grid(row=0, column=2, sticky="w", padx=(10,0))
+        ttk.Spinbox(peak_opts_frame, textvariable=self.peak_label_offset_var, from_=0.1, to=5, increment=0.1, command=self.schedule_update, width=5).grid(row=0, column=3, sticky="w")
+
+        canvas_container = tk.Frame(container); canvas_container.grid(row=2, column=0, sticky="nsew"); canvas_container.rowconfigure(0, weight=1); canvas_container.columnconfigure(0, weight=1)
         canvas = tk.Canvas(canvas_container, borderwidth=0, highlightthickness=0); canvas.grid(row=0, column=0, sticky="nsew"); scrollbar = tk.Scrollbar(canvas_container, orient="vertical", command=canvas.yview); scrollbar.grid(row=0, column=1, sticky="ns"); canvas.configure(yscrollcommand=scrollbar.set); self.peak_frame = tk.Frame(canvas); canvas.create_window((0, 0), window=self.peak_frame, anchor="nw"); self.peak_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))); self.peak_frame.columnconfigure(2, weight=1); self.peak_frame.columnconfigure(3, weight=1)
         tk.Label(self.peak_frame, text="表示").grid(row=0, column=1); tk.Label(self.peak_frame, text="物質名/結晶面").grid(row=0, column=2); tk.Label(self.peak_frame, text="2θ").grid(row=0, column=3); tk.Label(self.peak_frame, text="色").grid(row=0, column=4); tk.Label(self.peak_frame, text="線種").grid(row=0, column=5)
-        linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-. "}
+        linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-."}
         for i in range(10):
             tk.Label(self.peak_frame, text=f"#{i+1}").grid(row=i+1, column=0, padx=(5,2), pady=2, sticky="w"); vis_var = tk.BooleanVar(value=False); tk.Checkbutton(self.peak_frame, variable=vis_var, command=self.schedule_update).grid(row=i+1, column=1); self.peak_visible_vars.append(vis_var); name_var = tk.StringVar(); tk.Entry(self.peak_frame, textvariable=name_var).grid(row=i+1, column=2, padx=2, pady=2, sticky="ew"); self.peak_name_vars.append(name_var); name_var.trace_add("write", self.schedule_update); angle_var = tk.StringVar(); tk.Entry(self.peak_frame, textvariable=angle_var).grid(row=i+1, column=3, padx=2, pady=2, sticky="ew"); self.peak_angle_vars.append(angle_var); angle_var.trace_add("write", self.schedule_update); color_var = tk.StringVar(value="#000000"); color_button = tk.Button(self.peak_frame, text="■", width=2, relief=tk.SUNKEN, command=self._create_color_picker_command(i)); color_button.grid(row=i+1, column=4, padx=2, pady=2); self.peak_color_vars.append(color_var); self.peak_color_buttons.append(color_button); style_var = tk.StringVar(value=linestyle_map["破線"]); style_combo = ttk.Combobox(self.peak_frame, values=list(linestyle_map.keys()), width=6, state="readonly"); style_combo.set("破線"); style_combo.bind("<<ComboboxSelected>>", lambda e, v=style_var, c=style_combo, m=linestyle_map: (v.set(m[c.get()]), self.schedule_update())); style_combo.grid(row=i+1, column=5, padx=(2,5), pady=2); self.peak_style_vars.append(style_var)
             tk.Button(self.peak_frame, text="×", command=lambda i=i: self.clear_peak_row(i), width=2).grid(row=i+1, column=6, padx=(2,5))
-
+    
     def build_appearance_tab(self, tab):
         appearance_frame = tk.Frame(tab, padx=10, pady=10); appearance_frame.pack(fill="x"); appearance_frame.columnconfigure(1, weight=1)
         def create_row(parent, label_text, var, row, widget_class=tk.Entry, **widget_args):
@@ -144,7 +145,8 @@ class XRDPlotter(tk.Frame):
             elif isinstance(widget, tk.Entry): var.trace_add("write", self.schedule_update)
         create_row(appearance_frame, "X軸ラベル:", self.xlabel_var, 0); create_row(appearance_frame, "Y軸ラベル:", self.ylabel_var, 1)
         create_row(appearance_frame, "軸ラベルフォントサイズ:", self.axis_label_fontsize_var, 2, ttk.Spinbox, from_=1, to=100); create_row(appearance_frame, "目盛りフォントサイズ:", self.tick_label_fontsize_var, 3, ttk.Spinbox, from_=1, to=100)
-        create_row(appearance_frame, "凡例フォントサイズ:", self.legend_fontsize_var, 4, ttk.Spinbox, from_=1, to=100); create_row(appearance_frame, "データ線の太さ:", self.plot_linewidth_var, 5, ttk.Spinbox, from_=0.1, to=10, increment=0.1)
+        create_row(appearance_frame, "凡例フォントサイズ:", self.legend_fontsize_var, 4, ttk.Spinbox, from_=1, to=100); 
+        create_row(appearance_frame, "データ線の太さ:", self.plot_linewidth_var, 5, ttk.Spinbox, from_=0.1, to=10, increment=0.1)
         create_row(appearance_frame, "X軸主目盛り間隔:", self.xaxis_major_tick_spacing_var, 6, ttk.Spinbox, from_=1, to=100)
         tk.Label(appearance_frame, text="X軸目盛りの向き:").grid(row=7, column=0, sticky="w", pady=2)
         dir_combo = ttk.Combobox(appearance_frame, textvariable=self.tick_direction_var, values=['in', 'out', 'inout'], state="readonly"); dir_combo.grid(row=7, column=1, sticky="ew", padx=5, pady=2); dir_combo.bind("<<ComboboxSelected>>", self.schedule_update)
@@ -194,12 +196,13 @@ class XRDPlotter(tk.Frame):
             sub_menu = tk.Menu(menu, tearoff=0)
             menu.add_cascade(label=substance, menu=sub_menu)
             for i, peak in enumerate(peaks):
-                sub_menu.add_command(label=f"{peak['name']} ({peak['angle']})", command=lambda p=peak, idx=i: self.add_peak_to_list(p, idx))
+                sub_menu.add_command(label=f"{peak['name']} ({peak['angle']})", command=lambda p=peak, idx=i, s=substance: self.add_peak_to_list(p, idx, s))
 
-    def add_peak_to_list(self, peak_data, target_index):
+    def add_peak_to_list(self, peak_data, target_index, substance):
         if 0 <= target_index < 10:
-            self.peak_name_vars[target_index].set(peak_data.get("name", ""))
-            self.peak_angle_vars[target_index].set(peak_data.get("angle", ""))
+            full_name = f"{substance} {peak_data.get('name', '')}"
+            self.peak_name_vars[target_index].set(full_name)
+            self.peak_angle_vars[target_index].set(peak_data.get('angle', ''))
             self.peak_visible_vars[target_index].set(True)
         self.schedule_update()
 
@@ -233,7 +236,14 @@ class XRDPlotter(tk.Frame):
             if xmin is not None and xmax is not None and xmin >= xmax: messagebox.showwarning("警告", "横軸の最小値は最大値より小さくしてください。"); return
         except ValueError: messagebox.showwarning("警告", "グラフ設定の数値が不正です。"); return
         reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_name_vars[i].get().strip() and self.peak_angle_vars[i].get().strip()]
-        appearance_settings = {'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 'axis_label_fontsize': self.axis_label_fontsize_var.get(), 'tick_label_fontsize': self.tick_label_fontsize_var.get(), 'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(), 'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get(), 'ytop_padding_factor': self.ytop_padding_factor_var.get(), 'hide_major_xtick_labels': self.hide_major_xtick_labels_var.get(), 'show_minor_xticks': self.show_minor_xticks_var.get(), 'xminor_tick_spacing': self.xminor_tick_spacing_var.get()}
+        appearance_settings = {
+            'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 'axis_label_fontsize': self.axis_label_fontsize_var.get(), 'tick_label_fontsize': self.tick_label_fontsize_var.get(),
+            'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(),
+            'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get(), 'ytop_padding_factor': self.ytop_padding_factor_var.get(),
+            'hide_major_xtick_labels': self.hide_major_xtick_labels_var.get(), 'show_minor_xticks': self.show_minor_xticks_var.get(), 'xminor_tick_spacing': self.xminor_tick_spacing_var.get(),
+            'peak_label_fontsize': self.peak_label_fontsize_var.get(),
+            'peak_label_offset': self.peak_label_offset_var.get()
+        }
         self.ax.clear()
         error_message = data_analyzer.draw_plot(ax=self.ax, plot_data_full=plot_data_full, threshold=threshold, x_range=(xmin, xmax), reference_peaks=reference_peaks, show_legend=self.show_legend_var.get(), stack=self.stack_plots_var.get(), spacing=spacing, appearance=appearance_settings)
         if error_message: messagebox.showinfo("情報", error_message)

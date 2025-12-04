@@ -29,9 +29,11 @@ def _draw_reference_peaks(ax: plt.Axes, peaks_to_plot: List[Dict[str, Any]], yma
         name, angle = peak.get('name', ''), peak.get('angle')
         color, linestyle = peak.get('color', 'black'), peak.get('linestyle', '--')
         if angle is not None:
-            ax.axvline(x=angle, color=color, linestyle=linestyle, linewidth=1.2, ymax=0.95)
-            ax.text(angle + 0.2, ymax * 0.9, name, rotation=90, verticalalignment='top', 
-                    horizontalalignment='left', color=color, fontsize=appearance.get('tick_label_fontsize', 10), fontweight='bold')
+            ax.axvline(x=angle, color=color, linestyle=linestyle, linewidth=1.2, ymax=1.0)
+            peak_fontsize = appearance.get('peak_label_fontsize', 9)
+            offset = appearance.get('peak_label_offset', 0.4)
+            ax.text(angle + offset, ymax * 0.9, name, rotation=90, verticalalignment='top', 
+                    horizontalalignment='left', color=color, fontsize=peak_fontsize, fontweight='bold')
 
 def draw_plot(
     ax: plt.Axes, plot_data_full: List[Dict[str, Any]], threshold: float, x_range: Tuple[Optional[float], Optional[float]],
