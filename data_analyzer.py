@@ -4,7 +4,8 @@ from matplotlib.ticker import MultipleLocator, NullLocator
 import numpy as np
 from typing import List, Tuple, Dict, Optional, Any
 
-def parse_ras_file(filepath: str) -> Tuple[Optional[List[float]], Optional[List[float]]]:
+# parse_ras_file は draw_plot から切り離され、呼び出し元で処理される
+def parse_ras_file(filepath: str) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
     angles, intensities = [], []
     data_started = False
     try:
@@ -18,7 +19,8 @@ def parse_ras_file(filepath: str) -> Tuple[Optional[List[float]], Optional[List[
                         if len(parts) >= 2: angles.append(float(parts[0])); intensities.append(float(parts[1]))
                     except (ValueError, IndexError): continue
     except Exception: return None, None
-    return angles, intensities
+    return np.array(angles, dtype=float), np.array(intensities, dtype=float)
+
 
 def _draw_reference_peaks(ax: plt.Axes, peaks_to_plot: List[Dict[str, Any]], ymax: float, appearance: Dict[str, Any]):
     if not peaks_to_plot: return
@@ -32,11 +34,10 @@ def _draw_reference_peaks(ax: plt.Axes, peaks_to_plot: List[Dict[str, Any]], yma
                     horizontalalignment='left', color=color, fontsize=appearance.get('tick_label_fontsize', 10), fontweight='bold')
 
 def draw_plot(
-    ax: plt.Axes, plot_data: List[Dict[str, str]], threshold: float, x_range: Tuple[Optional[float], Optional[float]],
+    ax: plt.Axes, plot_data_full: List[Dict[str, Any]], threshold: float, x_range: Tuple[Optional[float], Optional[float]],
     reference_peaks: List[Dict[str, Any]], show_legend: bool, stack: bool, spacing: float, appearance: Dict[str, Any]
 ) -> Optional[str]:
     ax.clear()
-    parse_errors = []
     
     linewidth = appearance.get('linewidth', 1.0)
     legend_fontsize = appearance.get('legend_fontsize', 10)
@@ -47,42 +48,38 @@ def draw_plot(
     all_plot_points_y = []
     first_plot_lowest_y_val = None
 
-    if stack:
-        current_multiplier = 1.0
-        for idx, item in enumerate(plot_data):
-            filepath = item['filepath']
-            angles, intensities = parse_ras_file(filepath)
-            if angles is None: parse_errors.append(os.path.basename(filepath)); continue
-            intensities_np = np.array(intensities, dtype=float)
-            intensities_np[(intensities_np < threshold) | (intensities_np <= 0)] = np.nan
-            if np.all(np.isnan(intensities_np)): continue
-            current_color = color_sequence[idx % len(color_sequence)]
+    current_multiplier_factor = (10**spacing) # 各プロット間での乗算係数
+
+    for idx, item in enumerate(plot_data_full): # plot_data_full をループ
+        angles = item['angles']
+        intensities = item['intensities']
+        
+        # 閾値処理とNaNの適用は描画関数内で行う (キャッシュされたデータは生データ)
+        intensities_np = np.array(intensities, dtype=float)
+        intensities_np[(intensities_np < threshold) | (intensities_np <= 0)] = np.nan
+        
+        if np.all(np.isnan(intensities_np)): continue
+
+        current_color = color_sequence[idx % len(color_sequence)] # 色をシーケンスから取得
+
+        plot_intensities = intensities_np
+        if stack:
+            current_multiplier = (current_multiplier_factor ** idx) # 各プロットの乗数はspacingとidxで決定
             plot_intensities = intensities_np * current_multiplier
-            ax.plot(angles, plot_intensities, label=item['label'], linewidth=linewidth, color=current_color)
-            all_plot_points_y.extend(plot_intensities)
+            
             if idx == 0:
                 with np.errstate(all='ignore'): first_plot_lowest_y_val = np.nanmin(plot_intensities)
-            current_multiplier *= (10**spacing)
-    else:
-        for idx, item in enumerate(plot_data):
-            filepath = item['filepath']
-            angles, intensities = parse_ras_file(filepath)
-            if angles is None: parse_errors.append(os.path.basename(filepath)); continue
-            intensities_np = np.array(intensities, dtype=float)
-            intensities_np[(intensities_np < threshold) | (intensities_np <= 0)] = np.nan
-            if np.all(np.isnan(intensities_np)): continue
-            current_color = color_sequence[idx % len(color_sequence)]
-            ax.plot(angles, intensities_np, label=item['label'], linewidth=linewidth, color=current_color)
-            all_plot_points_y.extend(intensities_np)
-        
-    if parse_errors: return f"以下のファイルの読み込みに失敗しました:\n" + "\n".join(parse_errors)
 
+        ax.plot(angles, plot_intensities, label=item['label'], linewidth=linewidth, color=current_color)
+        all_plot_points_y.extend(plot_intensities[~np.isnan(plot_intensities)]) # NaNを除いて追加
+        
     if not all_plot_points_y or np.all(np.isnan(all_plot_points_y)):
         ymin_val, ymax_val = 1, 10
     else:
         with np.errstate(all='ignore'):
             min_all_y = np.nanmin(all_plot_points_y)
             ymax_val = np.nanmax(all_plot_points_y) * ytop_padding_factor
+
         if stack and first_plot_lowest_y_val is not None and not np.isnan(first_plot_lowest_y_val):
             ymin_val = first_plot_lowest_y_val
         else:
