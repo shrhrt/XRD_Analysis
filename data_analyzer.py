@@ -1,6 +1,7 @@
 import os
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
+from matplotlib.ticker import MultipleLocator, NullLocator
+import numpy as np
 from typing import List, Tuple, Dict, Optional, Any
 
 def parse_ras_file(filepath: str) -> Tuple[Optional[List[float]], Optional[List[float]]]:
@@ -41,54 +42,82 @@ def draw_plot(
     legend_fontsize = appearance.get('legend_fontsize', 10)
 
     # --- データプロット ---
-    all_intensities = [threshold if threshold > 0 else 1]
+    all_plot_points_y = []
+    first_plot_lowest_y_val = None
+
+    plot_func = lambda angles, intensities, label: ax.plot(angles, intensities, label=label, linewidth=linewidth)
+
     if stack:
         current_multiplier = 1.0
-        for item in plot_data:
+        for idx, item in enumerate(plot_data):
             filepath = item['filepath']
             angles, intensities = parse_ras_file(filepath)
             if angles is None: parse_errors.append(os.path.basename(filepath)); continue
-            filtered_data = [(a, i) for a, i in zip(angles, intensities) if i >= threshold and i > 0]
-            if not filtered_data: continue
-            angles, intensities = zip(*filtered_data)
-            plot_intensities = [i * current_multiplier for i in intensities]
-            ax.plot(angles, plot_intensities, label=item['label'], linewidth=linewidth)
-            all_intensities.extend(plot_intensities)
+            
+            intensities_np = np.array(intensities, dtype=float)
+            intensities_np[(intensities_np < threshold) | (intensities_np <= 0)] = np.nan
+            
+            if np.all(np.isnan(intensities_np)): continue
+
+            plot_intensities = intensities_np * current_multiplier
+            plot_func(angles, plot_intensities, item['label'])
+            all_plot_points_y.extend(plot_intensities)
+            
+            if idx == 0:
+                with np.errstate(all='ignore'):
+                    first_plot_lowest_y_val = np.nanmin(plot_intensities)
+
             current_multiplier *= (10**spacing)
-    else:
+    else: # 重ね描きモード
         for item in plot_data:
             filepath = item['filepath']
             angles, intensities = parse_ras_file(filepath)
             if angles is None: parse_errors.append(os.path.basename(filepath)); continue
-            filtered_data = [(a, i) for a, i in zip(angles, intensities) if i >= threshold and i > 0]
-            if not filtered_data: continue
-            angles, intensities = zip(*filtered_data)
-            ax.plot(angles, intensities, label=item['label'], linewidth=linewidth)
-            all_intensities.extend(intensities)
+            
+            intensities_np = np.array(intensities, dtype=float)
+            intensities_np[(intensities_np < threshold) | (intensities_np <= 0)] = np.nan
+            
+            if np.all(np.isnan(intensities_np)): continue
+
+            plot_func(angles, intensities_np, item['label'])
+            all_plot_points_y.extend(intensities_np)
         
     if parse_errors: return f"以下のファイルの読み込みに失敗しました:\n" + "\n".join(parse_errors)
+
+    # --- Y軸の範囲設定 ---
+    if not all_plot_points_y or np.all(np.isnan(all_plot_points_y)):
+        initial_bottom_limit = threshold if threshold > 0 else 1
+        ymin_val, ymax_val = initial_bottom_limit, initial_bottom_limit * 10
+    else:
+        with np.errstate(all='ignore'):
+            min_all_y = np.nanmin(all_plot_points_y)
+            ymax_val = np.nanmax(all_plot_points_y) * 1.1
+
+        if stack and first_plot_lowest_y_val is not None and not np.isnan(first_plot_lowest_y_val):
+            ymin_val = first_plot_lowest_y_val
+        else:
+            ymin_val = min_all_y
+    
+    ax.set_ylim(bottom=ymin_val, top=ymax_val)
 
     # --- 外観設定 ---
     ax.set_xlabel(appearance.get('xlabel', '2θ/ω (degree)'), fontsize=appearance.get('axis_label_fontsize', 20))
     ax.set_ylabel(appearance.get('ylabel', 'Log Intensity (arb. Units)'), fontsize=appearance.get('axis_label_fontsize', 20))
-    ax.tick_params(axis='both', direction=appearance.get('tick_direction', 'in'), labelsize=appearance.get('tick_label_fontsize', 16))
+    ax.tick_params(axis='x', direction=appearance.get('tick_direction', 'in'), labelsize=appearance.get('tick_label_fontsize', 16))
     
     # --- 軸設定 ---
     ax.set_xlim(x_range[0], x_range[1])
     ax.set_yscale('log')
-    
     ax.xaxis.set_major_locator(MultipleLocator(appearance.get('xaxis_major_tick_spacing', 10)))
     
-    # グリッド線はX軸のみに適用
-    if appearance.get('show_grid', False): # デフォルトをFalseに変更
+    # Y軸の目盛りを完全に非表示にする
+    ax.yaxis.set_major_locator(NullLocator())
+    ax.yaxis.set_minor_locator(NullLocator())
+
+    if appearance.get('show_grid', False):
         ax.grid(True, axis='x', which="both", ls="--", linewidth=0.5)
     else:
-        ax.grid(False) # 明示的にグリッドをオフ
-
-    if stack:
-        ax.tick_params(axis='y', labelleft=False) # Y軸の目盛りラベルを非表示
-    else:
-        ax.set_yticklabels([]) # 重ね描きモードでもY軸ラベルを非表示
+        ax.grid(False)
     
     if show_legend:
         leg = ax.legend(fontsize=legend_fontsize)

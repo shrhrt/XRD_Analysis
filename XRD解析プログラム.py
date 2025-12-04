@@ -29,7 +29,7 @@ class XRDPlotter(tk.Frame):
         self.plot_linewidth_var = tk.DoubleVar(value=1.0)
         self.tick_direction_var = tk.StringVar(value='in')
         self.xaxis_major_tick_spacing_var = tk.DoubleVar(value=10)
-        self.show_grid_var = tk.BooleanVar(value=False) # デフォルトをFalseに変更
+        self.show_grid_var = tk.BooleanVar(value=False)
 
         self._debounce_job, self.file_data, self.fig, self.ax = None, {}, None, None
 
@@ -63,7 +63,6 @@ class XRDPlotter(tk.Frame):
         # --- プロット設定タブ ---
         plot_settings_tab.rowconfigure(2, weight=1); plot_settings_tab.columnconfigure(0, weight=1)
         
-        # File Frame
         file_frame = tk.LabelFrame(plot_settings_tab, text="ファイル設定")
         file_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         file_frame.columnconfigure(0, weight=1)
@@ -83,7 +82,6 @@ class XRDPlotter(tk.Frame):
         h_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.HORIZONTAL, command=self.file_listbox.xview)
         h_scrollbar.grid(row=1, column=0, sticky="ew"); self.file_listbox.config(xscrollcommand=h_scrollbar.set)
 
-        # Graph Settings Frame
         graph_settings_frame = tk.LabelFrame(plot_settings_tab, text="グラフ設定")
         graph_settings_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         graph_settings_frame.columnconfigure(1, weight=1)
@@ -128,7 +126,6 @@ class XRDPlotter(tk.Frame):
             widget.grid(row=row, column=1, sticky="ew", padx=5, pady=2)
             if isinstance(widget, (ttk.Spinbox, tk.Scale)): widget.configure(command=lambda *args: self.schedule_update())
             elif isinstance(widget, tk.Entry): var.trace_add("write", self.schedule_update)
-            return widget # Return widget instance for custom bindings if needed
         create_appearance_row(appearance_frame, "X軸ラベル:", self.xlabel_var, 0)
         create_appearance_row(appearance_frame, "Y軸ラベル:", self.ylabel_var, 1)
         create_appearance_row(appearance_frame, "軸ラベルフォントサイズ:", self.axis_label_fontsize_var, 2, ttk.Spinbox, from_=1, to=100)
