@@ -62,6 +62,14 @@ class XRDPlotter(tk.Frame):
         self.export_width_var, self.export_height_var, self.export_format_var = tk.StringVar(value="6"), tk.StringVar(value="6"), tk.StringVar(value="png")
         self.selected_substance_var = tk.StringVar()
         
+        # Analysis settings
+        self.bg_subtract_enabled_var = tk.BooleanVar(value=False)
+        self.bg_subtract_window_var = tk.IntVar(value=50)
+        self.peak_detection_enabled_var = tk.BooleanVar(value=False)
+        self.peak_detection_height_var = tk.DoubleVar(value=100)
+        self.peak_detection_prominence_var = tk.DoubleVar(value=50)
+        self.peak_detection_width_var = tk.DoubleVar(value=1)
+
         self._debounce_job, self.file_data, self.parsed_data = None, {}, {}
         
         self.fig = Figure(figsize=(6,4))
@@ -163,13 +171,18 @@ class XRDPlotter(tk.Frame):
         self.xminor_tick_spacing_entry = ttk.Spinbox(appearance_frame, textvariable=self.xminor_tick_spacing_var, from_=0.1, to=10, increment=0.1, command=self.schedule_update); self.xminor_tick_spacing_entry.grid(row=12, column=1, sticky="ew", padx=5, pady=2)
 
     def build_analysis_tab(self, tab):
-        analysis_frame = tk.Frame(tab, padx=10, pady=10); analysis_frame.pack(fill="x")
-        d_spacing_frame = tk.LabelFrame(analysis_frame, text="d値計算ツール"); d_spacing_frame.pack(fill="x", pady=5); d_spacing_frame.columnconfigure(1, weight=1)
+        analysis_frame = tk.Frame(tab, padx=10, pady=10); analysis_frame.pack(fill="x", anchor="n")
+        analysis_frame.columnconfigure(0, weight=1)
+
+        # d-spacing tool
+        d_spacing_frame = tk.LabelFrame(analysis_frame, text="d値計算ツール"); d_spacing_frame.grid(row=0, column=0, sticky="ew", pady=5); d_spacing_frame.columnconfigure(1, weight=1)
         tk.Label(d_spacing_frame, text="ブラッグの式: nλ = 2d sin(θ)").grid(row=0, column=0, columnspan=3, sticky="w", padx=5)
         tk.Label(d_spacing_frame, text="定数: X線=Co Kα1 (λ=1.78897 Å), n=1").grid(row=1, column=0, columnspan=3, sticky="w", padx=5)
         tk.Label(d_spacing_frame, text="2θ (degree):").grid(row=2, column=0, sticky="w", padx=5, pady=5); d_input_entry = tk.Entry(d_spacing_frame, textvariable=self.d_spacing_input_2theta_var); d_input_entry.grid(row=2, column=1, sticky="ew", padx=5); tk.Button(d_spacing_frame, text="計算", command=self.calculate_d_spacing).grid(row=2, column=2, padx=5)
         tk.Label(d_spacing_frame, textvariable=self.d_spacing_result_var, relief="sunken").grid(row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=5); d_input_entry.bind("<Return>", self.calculate_d_spacing)
-        lc_frame = tk.LabelFrame(analysis_frame, text="格子定数計算ツール (立方晶のみ)"); lc_frame.pack(fill="x", pady=5); lc_frame.columnconfigure(1, weight=1)
+        
+        # Lattice constant tool
+        lc_frame = tk.LabelFrame(analysis_frame, text="格子定数計算ツール (立方晶のみ)"); lc_frame.grid(row=1, column=0, sticky="ew", pady=5); lc_frame.columnconfigure(1, weight=1)
         tk.Label(lc_frame, text="式: a = d * √(h² + k² + l²)").grid(row=0, column=0, columnspan=3, sticky="w", padx=5)
         tk.Label(lc_frame, text="d-spacing (Å):").grid(row=1, column=0, sticky="w", padx=5, pady=5); lc_d_entry = tk.Entry(lc_frame, textvariable=self.lc_input_d_var); lc_d_entry.grid(row=1, column=1, sticky="ew", padx=5); tk.Button(lc_frame, text="コピー", command=self.copy_d_spacing).grid(row=1, column=2, padx=5)
         hkl_frame = tk.Frame(lc_frame); hkl_frame.grid(row=2, column=0, columnspan=3, sticky="w", padx=5, pady=5)
@@ -177,12 +190,35 @@ class XRDPlotter(tk.Frame):
         tk.Button(lc_frame, text="計算", command=self.calculate_lattice_constant).grid(row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=5)
         tk.Label(lc_frame, textvariable=self.lc_result_var, relief="sunken").grid(row=4, column=0, columnspan=3, sticky="ew", padx=5, pady=5)
 
+        # Background subtraction
+        bg_frame = tk.LabelFrame(analysis_frame, text="バックグラウンド除去"); bg_frame.grid(row=2, column=0, sticky="ew", pady=5); bg_frame.columnconfigure(1, weight=1)
+        tk.Checkbutton(bg_frame, text="有効化", variable=self.bg_subtract_enabled_var, command=self.schedule_update).grid(row=0, column=0, sticky="w", padx=5)
+        tk.Label(bg_frame, text="ウィンドウサイズ:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        ttk.Spinbox(bg_frame, textvariable=self.bg_subtract_window_var, from_=1, to=1000, command=self.schedule_update, width=10).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+
+        # Peak detection
+        peak_frame = tk.LabelFrame(analysis_frame, text="ピーク検出"); peak_frame.grid(row=3, column=0, sticky="ew", pady=5); peak_frame.columnconfigure(1, weight=1)
+        tk.Checkbutton(peak_frame, text="有効化", variable=self.peak_detection_enabled_var, command=self.schedule_update).grid(row=0, column=0, columnspan=2, sticky="w", padx=5)
+        tk.Label(peak_frame, text="最小高さ:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        ttk.Spinbox(peak_frame, textvariable=self.peak_detection_height_var, from_=0, to=1e9, increment=10, command=self.schedule_update).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(peak_frame, text="最小プロミネンス:").grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        ttk.Spinbox(peak_frame, textvariable=self.peak_detection_prominence_var, from_=0, to=1e9, increment=10, command=self.schedule_update).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(peak_frame, text="最小幅:").grid(row=3, column=0, sticky="w", padx=5, pady=2)
+        ttk.Spinbox(peak_frame, textvariable=self.peak_detection_width_var, from_=0, to=100, increment=0.5, command=self.schedule_update).grid(row=3, column=1, sticky="ew", padx=5, pady=2)
+
     def build_export_tab(self, tab):
         export_frame = tk.LabelFrame(tab, text="画像ファイルとして保存"); export_frame.pack(fill="x", padx=10, pady=10); export_frame.columnconfigure(1, weight=1)
         tk.Label(export_frame, text="幅 (inch):").grid(row=0, column=0, sticky="w", padx=5, pady=2); tk.Entry(export_frame, textvariable=self.export_width_var).grid(row=0, column=1, sticky="ew", padx=5, pady=2)
         tk.Label(export_frame, text="高さ (inch):").grid(row=1, column=0, sticky="w", padx=5, pady=2); tk.Entry(export_frame, textvariable=self.export_height_var).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(export_frame, text="形式:").grid(row=2, column=0, sticky="w", padx=5, pady=2); ttk.Combobox(export_frame, textvariable=self.export_format_var, values=["png", "pdf"], state="readonly").grid(row=2, column=1, sticky="ew", padx=5, pady=2)
-        tk.Button(export_frame, text="グラフを保存", command=self.save_figure, font=("", 10, "bold")).grid(row=3, column=0, columnspan=2, sticky="ew", padx=5, pady=(10, 5))
+        tk.Label(export_frame, text="形式:").grid(row=2, column=0, sticky="w", padx=5, pady=2); ttk.Combobox(export_frame, textvariable=self.export_format_var, values=["png", "pdf", "svg"], state="readonly").grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        
+        button_frame = tk.Frame(export_frame)
+        button_frame.grid(row=3, column=0, columnspan=2, sticky="ew", padx=5, pady=(10, 5))
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+        tk.Button(button_frame, text="プレビュー", command=self.preview_figure).grid(row=0, column=0, sticky="ew", padx=(0,2))
+        tk.Button(button_frame, text="グラフを保存", command=self.save_figure, font=("", 10, "bold")).grid(row=0, column=1, sticky="ew", padx=(2,0))
+
 
     def _toggle_spacing_widget(self, *args):
         if self.stack_plots_var.get(): self.spacing_label.grid(); self.spacing_entry.grid()
@@ -224,33 +260,68 @@ class XRDPlotter(tk.Frame):
             color_code = colorchooser.askcolor(title="色を選択", initialcolor=self.peak_color_vars[index].get())
             if color_code and color_code[1]: self.peak_color_vars[index].set(color_code[1]); self.peak_color_buttons[index].config(fg=color_code[1]); self.schedule_update()
         return command
-
-    def update_plot(self):
+    
+    def _get_current_plot_settings(self):
         filepaths = self.file_listbox.get(0, tk.END)
         plot_data_full = [{'label': self.file_data[fp], 'angles': self.parsed_data[fp][0], 'intensities': self.parsed_data[fp][1]} for fp in filepaths if fp in self.file_data and fp in self.parsed_data]
-        if not plot_data_full:
-            self.ax.clear()
-            self.ax.text(0.5, 0.5, "ファイルを選択してください", ha='center', va='center', transform=self.ax.transAxes)
-            self.canvas.draw()
-            return
+        
         try:
             threshold = float(self.threshold_var.get()) if self.threshold_var.get() else 0.0
             spacing = self.plot_spacing_var.get()
             xmin = float(self.xmin_var.get()) if self.xmin_var.get() else None
             xmax = float(self.xmax_var.get()) if self.xmax_var.get() else None
-            if xmin is not None and xmax is not None and xmin >= xmax: messagebox.showwarning("警告", "横軸の最小値は最大値より小さくしてください。"); return
-        except ValueError: messagebox.showwarning("警告", "グラフ設定の数値が不正です。"); return
+            if xmin is not None and xmax is not None and xmin >= xmax:
+                messagebox.showwarning("警告", "横軸の最小値は最大値より小さくしてください。")
+                return None
+        except ValueError:
+            messagebox.showwarning("警告", "グラフ設定の数値が不正です。")
+            return None
+            
         reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_name_vars[i].get().strip() and self.peak_angle_vars[i].get().strip()]
+        
         appearance_settings = {
             'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 'axis_label_fontsize': self.axis_label_fontsize_var.get(), 'tick_label_fontsize': self.tick_label_fontsize_var.get(),
             'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(), 'threshold_handling': self.threshold_handling_var.get(),
             'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get(), 'ytop_padding_factor': self.ytop_padding_factor_var.get(),
             'hide_major_xtick_labels': self.hide_major_xtick_labels_var.get(), 'show_minor_xticks': self.show_minor_xticks_var.get(), 'xminor_tick_spacing': self.xminor_tick_spacing_var.get(),
-            'peak_label_fontsize': self.peak_label_fontsize_var.get(),
-            'peak_label_offset': self.peak_label_offset_var.get()
+            'peak_label_fontsize': self.peak_label_fontsize_var.get(), 'peak_label_offset': self.peak_label_offset_var.get()
         }
+
+        bg_subtract_settings = {
+            'enabled': self.bg_subtract_enabled_var.get(),
+            'window_size': self.bg_subtract_window_var.get()
+        }
+
+        peak_detection_settings = {
+            'enabled': self.peak_detection_enabled_var.get(),
+            'min_height': self.peak_detection_height_var.get(),
+            'min_prominence': self.peak_detection_prominence_var.get(),
+            'min_width': self.peak_detection_width_var.get()
+        }
+        
+        return {
+            'plot_data_full': plot_data_full, 'threshold': threshold, 'x_range': (xmin, xmax), 
+            'reference_peaks': reference_peaks, 'show_legend': self.show_legend_var.get(), 
+            'stack': self.stack_plots_var.get(), 'spacing': spacing, 'appearance': appearance_settings,
+            'bg_subtract_settings': bg_subtract_settings, 'peak_detection_settings': peak_detection_settings
+        }
+
+    def update_plot(self):
+        settings = self._get_current_plot_settings()
+        if not settings:
+            self.ax.clear()
+            self.ax.text(0.5, 0.5, "ファイルを選択するか、設定を確認してください", ha='center', va='center', transform=self.ax.transAxes)
+            self.canvas.draw()
+            return
+
+        if not settings['plot_data_full']:
+            self.ax.clear()
+            self.ax.text(0.5, 0.5, "ファイルを選択してください", ha='center', va='center', transform=self.ax.transAxes)
+            self.canvas.draw()
+            return
+
         self.ax.clear()
-        error_message = data_analyzer.draw_plot(ax=self.ax, plot_data_full=plot_data_full, threshold=threshold, x_range=(xmin, xmax), reference_peaks=reference_peaks, show_legend=self.show_legend_var.get(), stack=self.stack_plots_var.get(), spacing=spacing, appearance=appearance_settings) # threshold_handling を appearance_settings 経由で渡す
+        error_message = data_analyzer.draw_plot(ax=self.ax, **settings)
         if error_message: messagebox.showinfo("情報", error_message)
         self.fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
         self.canvas.draw()
@@ -292,12 +363,49 @@ class XRDPlotter(tk.Frame):
         idx = selected_indices[0]
         if idx < self.file_listbox.size() - 1: filepath = self.file_listbox.get(idx); self.file_listbox.delete(idx); self.file_listbox.insert(idx + 1, filepath); self.file_listbox.selection_set(idx + 1); self.schedule_update()
 
+    def preview_figure(self):
+        settings = self._get_current_plot_settings()
+        if not settings or not settings['plot_data_full']:
+            messagebox.showwarning("警告", "プレビュー対象のデータがありません。", parent=self.master)
+            return
+        
+        try:
+            width = float(self.export_width_var.get())
+            height = float(self.export_height_var.get())
+            if width <= 0 or height <= 0: raise ValueError("サイズは正の値である必要があります。")
+        except ValueError:
+            messagebox.showerror("エラー", "幅または高さの値が不正です。", parent=self.master)
+            return
+
+        preview_window = tk.Toplevel(self.master)
+        preview_window.title("エクスポートプレビュー")
+        preview_window.geometry("800x600")
+        
+        fig = Figure(figsize=(width, height))
+        ax = fig.add_subplot(111)
+
+        data_analyzer.draw_plot(ax=ax, **settings)
+        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
+        
+        canvas = FigureCanvasTkAgg(fig, master=preview_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        toolbar = NavigationToolbar2Tk(canvas, preview_window)
+        toolbar.update()
+
     def save_figure(self):
-        if not self.ax or not self.ax.lines: messagebox.showwarning("警告", "保存対象のデータがありません。"); return
+        settings = self._get_current_plot_settings()
+        if not settings or not settings['plot_data_full']:
+            messagebox.showwarning("警告", "保存対象のデータがありません。", parent=self.master)
+            return
+            
         try:
             width = float(self.export_width_var.get()); height = float(self.export_height_var.get())
             if width <= 0 or height <= 0: raise ValueError("サイズは正の値である必要があります。")
-        except ValueError: messagebox.showerror("エラー", "幅または高さの値が不正です。"); return
+        except ValueError:
+            messagebox.showerror("エラー", "幅または高さの値が不正です。", parent=self.master)
+            return
         
         default_filename = ""
         if self.file_listbox.size() > 0:
@@ -305,16 +413,19 @@ class XRDPlotter(tk.Frame):
             legend_name = self.file_data.get(first_filepath, "")
             default_filename = os.path.splitext(legend_name)[0]
 
-        filepath = filedialog.asksaveasfilename(title="グラフを保存", initialfile=default_filename, defaultextension=f".{self.export_format_var.get()}", filetypes=[(f"{self.export_format_var.get().upper()} files", f"*.{self.export_format_var.get()}"), ("All files", "*.*")])
+        filepath = filedialog.asksaveasfilename(title="グラフを保存", initialfile=default_filename, defaultextension=f".{self.export_format_var.get()}", filetypes=[(f"{self.export_format_var.get().upper()} files", f"*.{self.export_format_var.get()}"), ("All files", "*.*")], parent=self.master)
         if not filepath: return
-        original_size = self.fig.get_size_inches()
+        
+        fig = Figure(figsize=(width, height))
+        ax = fig.add_subplot(111)
+        data_analyzer.draw_plot(ax=ax, **settings)
+        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
+
         try:
-            self.fig.set_size_inches(width, height)
-            self.fig.savefig(filepath, dpi=300, bbox_inches='tight', transparent=True)
-            messagebox.showinfo("成功", f"グラフを保存しました:\n{filepath}")
-        except Exception as e: messagebox.showerror("エラー", f"ファイルの保存中にエラーが発生しました:\n{e}")
-        finally:
-            self.fig.set_size_inches(original_size); self.canvas.draw_idle()
+            fig.savefig(filepath, dpi=300, bbox_inches='tight', transparent=True)
+            messagebox.showinfo("成功", f"グラフを保存しました:\n{filepath}", parent=self.master)
+        except Exception as e:
+            messagebox.showerror("エラー", f"ファイルの保存中にエラーが発生しました:\n{e}", parent=self.master)
 
     def on_file_select(self, event):
         selected_indices = self.file_listbox.curselection()
