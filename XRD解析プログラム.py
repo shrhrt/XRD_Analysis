@@ -145,7 +145,7 @@ class XRDPlotter(tk.Frame):
         canvas_container = tk.Frame(container); canvas_container.grid(row=2, column=0, sticky="nsew"); canvas_container.rowconfigure(0, weight=1); canvas_container.columnconfigure(0, weight=1)
         canvas = tk.Canvas(canvas_container, borderwidth=0, highlightthickness=0); canvas.grid(row=0, column=0, sticky="nsew"); scrollbar = tk.Scrollbar(canvas_container, orient="vertical", command=canvas.yview); scrollbar.grid(row=0, column=1, sticky="ns"); canvas.configure(yscrollcommand=scrollbar.set); self.peak_frame = tk.Frame(canvas); canvas.create_window((0, 0), window=self.peak_frame, anchor="nw"); self.peak_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))); self.peak_frame.columnconfigure(2, weight=1); self.peak_frame.columnconfigure(3, weight=1)
         tk.Label(self.peak_frame, text="表示").grid(row=0, column=1); tk.Label(self.peak_frame, text="物質名/結晶面").grid(row=0, column=2); tk.Label(self.peak_frame, text="2θ").grid(row=0, column=3); tk.Label(self.peak_frame, text="色").grid(row=0, column=4); tk.Label(self.peak_frame, text="線種").grid(row=0, column=5)
-        linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-."}
+        linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-. "}
         for i in range(10):
             tk.Label(self.peak_frame, text=f"#{i+1}").grid(row=i+1, column=0, padx=(5,2), pady=2, sticky="w"); vis_var = tk.BooleanVar(value=False); tk.Checkbutton(self.peak_frame, variable=vis_var, command=self.schedule_update).grid(row=i+1, column=1); self.peak_visible_vars.append(vis_var); name_var = tk.StringVar(); tk.Entry(self.peak_frame, textvariable=name_var).grid(row=i+1, column=2, padx=2, pady=2, sticky="ew"); self.peak_name_vars.append(name_var); name_var.trace_add("write", self.schedule_update); angle_var = tk.StringVar(); tk.Entry(self.peak_frame, textvariable=angle_var).grid(row=i+1, column=3, padx=2, pady=2, sticky="ew"); self.peak_angle_vars.append(angle_var); angle_var.trace_add("write", self.schedule_update); color_var = tk.StringVar(value="#000000"); color_button = tk.Button(self.peak_frame, text="■", width=2, relief=tk.SUNKEN, command=self._create_color_picker_command(i)); color_button.grid(row=i+1, column=4, padx=2, pady=2); self.peak_color_vars.append(color_var); self.peak_color_buttons.append(color_button); style_var = tk.StringVar(value=linestyle_map["破線"]); style_combo = ttk.Combobox(self.peak_frame, values=list(linestyle_map.keys()), width=6, state="readonly"); style_combo.set("破線"); style_combo.bind("<<ComboboxSelected>>", lambda e, v=style_var, c=style_combo, m=linestyle_map: (v.set(m[c.get()]), self.schedule_update())); style_combo.grid(row=i+1, column=5, padx=(2,5), pady=2); self.peak_style_vars.append(style_var)
             tk.Button(self.peak_frame, text="×", command=lambda i=i: self.clear_peak_row(i), width=2).grid(row=i+1, column=6, padx=(2,5))
@@ -379,9 +379,10 @@ class XRDPlotter(tk.Frame):
 
         preview_window = tk.Toplevel(self.master)
         preview_window.title("エクスポートプレビュー")
-        preview_window.geometry("800x600")
         
-        fig = Figure(figsize=(width, height))
+        # Use a fixed DPI for the preview for predictability
+        preview_dpi = 100
+        fig = Figure(figsize=(width, height), dpi=preview_dpi)
         ax = fig.add_subplot(111)
 
         data_analyzer.draw_plot(ax=ax, **settings)
@@ -393,6 +394,14 @@ class XRDPlotter(tk.Frame):
 
         toolbar = NavigationToolbar2Tk(canvas, preview_window)
         toolbar.update()
+        toolbar.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # Set window size based on figure size in pixels + toolbar
+        preview_window.update_idletasks()
+        width_px = int(width * preview_dpi)
+        height_px = int(height * preview_dpi) + toolbar.winfo_height()
+        preview_window.geometry(f"{width_px}x{height_px}")
+
 
     def save_figure(self):
         settings = self._get_current_plot_settings()
@@ -416,13 +425,17 @@ class XRDPlotter(tk.Frame):
         filepath = filedialog.asksaveasfilename(title="グラフを保存", initialfile=default_filename, defaultextension=f".{self.export_format_var.get()}", filetypes=[(f"{self.export_format_var.get().upper()} files", f"*.{self.export_format_var.get()}"), ("All files", "*.*")], parent=self.master)
         if not filepath: return
         
-        fig = Figure(figsize=(width, height))
+        # Use a high DPI for saving the figure
+        save_dpi = 300
+        fig = Figure(figsize=(width, height), dpi=save_dpi)
         ax = fig.add_subplot(111)
         data_analyzer.draw_plot(ax=ax, **settings)
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
+        # Adjust subplot parameters for the new figure
+        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
 
         try:
-            fig.savefig(filepath, dpi=300, bbox_inches='tight', transparent=True)
+            # Use bbox_inches='tight' to ensure labels are not cut off
+            fig.savefig(filepath, dpi=save_dpi, bbox_inches='tight', transparent=True)
             messagebox.showinfo("成功", f"グラフを保存しました:\n{filepath}", parent=self.master)
         except Exception as e:
             messagebox.showerror("エラー", f"ファイルの保存中にエラーが発生しました:\n{e}", parent=self.master)
