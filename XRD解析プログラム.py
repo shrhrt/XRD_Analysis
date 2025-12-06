@@ -44,6 +44,7 @@ class XRDPlotter(tk.Frame):
         self.xmin_var, self.xmax_var = tk.StringVar(value="30"), tk.StringVar(value="130")
         self.threshold_var, self.legend_name_var = tk.StringVar(value="1"), tk.StringVar()
         self.show_legend_var, self.stack_plots_var = tk.BooleanVar(value=True), tk.BooleanVar(value=False)
+        self.threshold_handling_var = tk.StringVar(value="hide") # "hide" or "clip"
         self.plot_spacing_var = tk.DoubleVar(value=3)
         self.xlabel_var, self.ylabel_var = tk.StringVar(value="2θ/ω (degree)"), tk.StringVar(value="Log Intensity (arb. Units)")
         self.axis_label_fontsize_var, self.tick_label_fontsize_var = tk.DoubleVar(value=20), tk.DoubleVar(value=16)
@@ -106,11 +107,15 @@ class XRDPlotter(tk.Frame):
         tk.Label(graph_settings_frame, text="横軸 最小値:").grid(row=0, column=0, sticky="w", padx=5, pady=2); self.xmin_entry = tk.Entry(graph_settings_frame, textvariable=self.xmin_var); self.xmin_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
         tk.Label(graph_settings_frame, text="横軸 最大値:").grid(row=1, column=0, sticky="w", padx=5, pady=2); self.xmax_entry = tk.Entry(graph_settings_frame, textvariable=self.xmax_var); self.xmax_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
         tk.Label(graph_settings_frame, text="強度しきい値:").grid(row=2, column=0, sticky="w", padx=5, pady=2); self.threshold_entry = tk.Entry(graph_settings_frame, textvariable=self.threshold_var); self.threshold_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(graph_settings_frame, text="凡例名:").grid(row=3, column=0, sticky="w", padx=5, pady=2); self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled"); self.legend_name_entry.grid(row=3, column=1, sticky="ew", padx=5, pady=2)
-        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.toggle_legend_visibility); self.show_legend_check.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=2)
-        tk.Checkbutton(graph_settings_frame, text="グラフを縦に並べる", variable=self.stack_plots_var, command=self._toggle_spacing_widget).grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=2)
-        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n)"); self.spacing_label.grid(row=6, column=0, sticky="w", padx=5, pady=2)
-        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
+        threshold_handling_frame = tk.Frame(graph_settings_frame); threshold_handling_frame.grid(row=3, column=0, columnspan=2, sticky="w", padx=5)
+        tk.Label(threshold_handling_frame, text="しきい値以下のデータ:").pack(side="left")
+        tk.Radiobutton(threshold_handling_frame, text="非表示", variable=self.threshold_handling_var, value="hide", command=self.schedule_update).pack(side="left")
+        tk.Radiobutton(threshold_handling_frame, text="最小値に固定", variable=self.threshold_handling_var, value="clip", command=self.schedule_update).pack(side="left")
+        tk.Label(graph_settings_frame, text="凡例名:").grid(row=4, column=0, sticky="w", padx=5, pady=2); self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled"); self.legend_name_entry.grid(row=4, column=1, sticky="ew", padx=5, pady=2)
+        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.toggle_legend_visibility); self.show_legend_check.grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        tk.Checkbutton(graph_settings_frame, text="グラフを縦に並べる", variable=self.stack_plots_var, command=self._toggle_spacing_widget).grid(row=6, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n)"); self.spacing_label.grid(row=7, column=0, sticky="w", padx=5, pady=2)
+        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=7, column=1, sticky="ew", padx=5, pady=2)
         self.xmin_entry.bind("<FocusOut>", self.schedule_update); self.xmin_entry.bind("<Return>", self.schedule_update); self.xmax_entry.bind("<FocusOut>", self.schedule_update); self.xmax_entry.bind("<Return>", self.schedule_update); self.threshold_var.trace_add("write", self.schedule_update); self.legend_name_var.trace_add("write", self.on_legend_name_change)
         
         container = tk.LabelFrame(tab, text="参照ピーク設定"); container.grid(row=2, column=0, sticky="nsew"); container.rowconfigure(2, weight=1); container.columnconfigure(0, weight=1)
@@ -238,14 +243,14 @@ class XRDPlotter(tk.Frame):
         reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_name_vars[i].get().strip() and self.peak_angle_vars[i].get().strip()]
         appearance_settings = {
             'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 'axis_label_fontsize': self.axis_label_fontsize_var.get(), 'tick_label_fontsize': self.tick_label_fontsize_var.get(),
-            'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(),
+            'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(), 'threshold_handling': self.threshold_handling_var.get(),
             'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get(), 'ytop_padding_factor': self.ytop_padding_factor_var.get(),
             'hide_major_xtick_labels': self.hide_major_xtick_labels_var.get(), 'show_minor_xticks': self.show_minor_xticks_var.get(), 'xminor_tick_spacing': self.xminor_tick_spacing_var.get(),
             'peak_label_fontsize': self.peak_label_fontsize_var.get(),
             'peak_label_offset': self.peak_label_offset_var.get()
         }
         self.ax.clear()
-        error_message = data_analyzer.draw_plot(ax=self.ax, plot_data_full=plot_data_full, threshold=threshold, x_range=(xmin, xmax), reference_peaks=reference_peaks, show_legend=self.show_legend_var.get(), stack=self.stack_plots_var.get(), spacing=spacing, appearance=appearance_settings)
+        error_message = data_analyzer.draw_plot(ax=self.ax, plot_data_full=plot_data_full, threshold=threshold, x_range=(xmin, xmax), reference_peaks=reference_peaks, show_legend=self.show_legend_var.get(), stack=self.stack_plots_var.get(), spacing=spacing, appearance=appearance_settings) # threshold_handling を appearance_settings 経由で渡す
         if error_message: messagebox.showinfo("情報", error_message)
         self.fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
         self.canvas.draw()
@@ -293,12 +298,19 @@ class XRDPlotter(tk.Frame):
             width = float(self.export_width_var.get()); height = float(self.export_height_var.get())
             if width <= 0 or height <= 0: raise ValueError("サイズは正の値である必要があります。")
         except ValueError: messagebox.showerror("エラー", "幅または高さの値が不正です。"); return
-        filepath = filedialog.asksaveasfilename(title="グラフを保存",defaultextension=f".{self.export_format_var.get()}", filetypes=[(f"{self.export_format_var.get().upper()} files", f"*.{self.export_format_var.get()}"), ("All files", "*.*")])
+        
+        default_filename = ""
+        if self.file_listbox.size() > 0:
+            first_filepath = self.file_listbox.get(0)
+            legend_name = self.file_data.get(first_filepath, "")
+            default_filename = os.path.splitext(legend_name)[0]
+
+        filepath = filedialog.asksaveasfilename(title="グラフを保存", initialfile=default_filename, defaultextension=f".{self.export_format_var.get()}", filetypes=[(f"{self.export_format_var.get().upper()} files", f"*.{self.export_format_var.get()}"), ("All files", "*.*")])
         if not filepath: return
         original_size = self.fig.get_size_inches()
         try:
             self.fig.set_size_inches(width, height)
-            self.fig.savefig(filepath, dpi=300, bbox_inches='tight')
+            self.fig.savefig(filepath, dpi=300, bbox_inches='tight', transparent=True)
             messagebox.showinfo("成功", f"グラフを保存しました:\n{filepath}")
         except Exception as e: messagebox.showerror("エラー", f"ファイルの保存中にエラーが発生しました:\n{e}")
         finally:
