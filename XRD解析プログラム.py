@@ -8,6 +8,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import data_analyzer
+import json
 
 class XRDPlotter(tk.Frame):
     PREDEFINED_PEAKS_DB = {
@@ -62,20 +63,50 @@ class XRDPlotter(tk.Frame):
         self.export_width_var, self.export_height_var, self.export_format_var = tk.StringVar(value="6"), tk.StringVar(value="6"), tk.StringVar(value="png")
         self.selected_substance_var = tk.StringVar()
         
+        # List of tk variables to be saved/loaded
+        self._savable_vars = [
+            'xmin_var', 'xmax_var', 'threshold_var', 'show_legend_var', 'stack_plots_var',
+            'threshold_handling_var', 'plot_spacing_var', 'xlabel_var', 'ylabel_var',
+            'axis_label_fontsize_var', 'tick_label_fontsize_var', 'legend_fontsize_var',
+            'plot_linewidth_var', 'tick_direction_var', 'xaxis_major_tick_spacing_var',
+            'show_grid_var', 'ytop_padding_factor_var', 'hide_major_xtick_labels_var',
+            'show_minor_xticks_var', 'xminor_tick_spacing_var', 'peak_label_fontsize_var',
+            'peak_label_offset_var', 'd_spacing_input_2theta_var', 'lc_input_d_var',
+            'lc_h_var', 'lc_k_var', 'lc_l_var', 'export_width_var', 'export_height_var',
+            'export_format_var', 'bg_subtract_enabled_var', 'bg_subtract_window_var',
+            'peak_detection_enabled_var', 'peak_detection_height_var',
+            'peak_detection_prominence_var', 'peak_detection_width_var'
+        ]
+        
         # Analysis settings
         self.bg_subtract_enabled_var = tk.BooleanVar(value=False)
         self.bg_subtract_window_var = tk.IntVar(value=50)
         self.peak_detection_enabled_var = tk.BooleanVar(value=False)
-        self.peak_detection_height_var = tk.DoubleVar(value=100)
-        self.peak_detection_prominence_var = tk.DoubleVar(value=50)
-        self.peak_detection_width_var = tk.DoubleVar(value=1)
+        self.peak_detection_height_var = tk.DoubleVar(value=10)
+        self.peak_detection_prominence_var = tk.DoubleVar(value=10)
+        self.peak_detection_width_var = tk.DoubleVar(value=1.0)
 
         self._debounce_job, self.file_data, self.parsed_data = None, {}, {}
         
         self.fig = Figure(figsize=(6,4))
         self.ax = self.fig.add_subplot(111)
 
+        self.create_menu()
         self.create_widgets()
+
+    def create_menu(self):
+        self.menubar = tk.Menu(self.master)
+        self.master.config(menu=self.menubar)
+
+        file_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="ファイル", menu=file_menu)
+
+        file_menu.add_command(label="設定を読み込む...", command=self.load_settings)
+        file_menu.add_command(label="設定を保存...", command=self.save_settings)
+        file_menu.add_separator()
+        file_menu.add_command(label="グラフを画像として保存...", command=self.save_figure)
+        file_menu.add_separator()
+        file_menu.add_command(label="終了", command=self.master.quit)
 
     def create_widgets(self):
         main_pane = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=5)
@@ -478,6 +509,121 @@ class XRDPlotter(tk.Frame):
             if (h**2 + k**2 + l**2) == 0: self.lc_result_var.set("エラー: (h,k,l)は(0,0,0)にできません"); return
             a = d * math.sqrt(h**2 + k**2 + l**2); self.lc_result_var.set(f"a = {a:.5f} Å")
         except (ValueError, TypeError): self.lc_result_var.set("エラー: 有効な数値を入力してください")
+
+    def save_settings(self):
+        """Saves current plot settings to a JSON file."""
+        filepath = filedialog.asksaveasfilename(
+            title="設定を保存",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            defaultextension=".json",
+            parent=self.master
+        )
+        if not filepath:
+            return
+
+        settings = {
+            'files': {
+                'filepaths': self.file_listbox.get(0, tk.END),
+                'file_data': self.file_data,
+            },
+            'variables': {
+                var_name: getattr(self, var_name).get() for var_name in self._savable_vars
+            },
+            'reference_peaks': [
+                {
+                    'name': self.peak_name_vars[i].get(),
+                    'angle': self.peak_angle_vars[i].get(),
+                    'visible': self.peak_visible_vars[i].get(),
+                    'color': self.peak_color_vars[i].get(),
+                    'style': self.peak_style_vars[i].get()
+                } for i in range(len(self.peak_name_vars))
+            ]
+        }
+
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, indent=4, ensure_ascii=False)
+            messagebox.showinfo("成功", f"設定を保存しました:\n{filepath}", parent=self.master)
+        except Exception as e:
+            messagebox.showerror("エラー", f"設定の保存中にエラーが発生しました:\n{e}", parent=self.master)
+
+    def load_settings(self):
+        """Loads plot settings from a JSON file."""
+        filepath = filedialog.askopenfilename(
+            title="設定を読み込む",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            parent=self.master
+        )
+        if not filepath:
+            return
+
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+        except Exception as e:
+            messagebox.showerror("エラー", f"設定の読み込み中にエラーが発生しました:\n{e}", parent=self.master)
+            return
+        
+        # 1. Clear current state
+        self.file_listbox.delete(0, tk.END)
+        self.file_data.clear()
+        self.parsed_data.clear()
+        self.legend_name_entry.config(state="disabled"); self.legend_name_var.set("")
+        
+        # 2. Load files and parse data
+        loaded_filepaths = settings.get('files', {}).get('filepaths', [])
+        loaded_file_data = settings.get('files', {}).get('file_data', {})
+        
+        for fp in loaded_filepaths:
+            if os.path.exists(fp):
+                angles, intensities = data_analyzer.parse_ras_file(fp)
+                if angles is None or intensities is None:
+                    messagebox.showwarning("警告", f"ファイル {os.path.basename(fp)} の読み込みに失敗しました。スキップします。", parent=self.master)
+                    continue
+                self.parsed_data[fp] = (angles, intensities)
+                # Use legend name from saved settings, fall back to basename
+                self.file_data[fp] = loaded_file_data.get(fp, os.path.basename(fp))
+                self.file_listbox.insert(tk.END, fp)
+            else:
+                messagebox.showwarning("警告", f"ファイルが見つかりません: {fp}\nこのファイルはスキップされました。", parent=self.master)
+
+        if self.file_listbox.size() > 0:
+            self.file_listbox.selection_set(0)
+            self.on_file_select(None)
+        
+        # 3. Load simple variables
+        if 'variables' in settings:
+            for var_name, value in settings['variables'].items():
+                if hasattr(self, var_name):
+                    try:
+                        getattr(self, var_name).set(value)
+                    except Exception as e:
+                        print(f"Warning: Could not set variable '{var_name}' to '{value}'. Error: {e}")
+
+        # 4. Load reference peaks
+        if 'reference_peaks' in settings:
+            linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-. "}
+            reverse_linestyle_map = {v.strip(): k for k, v in linestyle_map.items()}
+
+            for i, peak_data in enumerate(settings['reference_peaks']):
+                if i < len(self.peak_name_vars):
+                    self.peak_name_vars[i].set(peak_data.get('name', ''))
+                    self.peak_angle_vars[i].set(peak_data.get('angle', ''))
+                    self.peak_visible_vars[i].set(peak_data.get('visible', False))
+                    color = peak_data.get('color', '#000000')
+                    self.peak_color_vars[i].set(color)
+                    self.peak_color_buttons[i].config(fg=color)
+                    
+                    style_value = peak_data.get('style', '--')
+                    self.peak_style_vars[i].set(style_value)
+                    # This part is tricky as the combobox is not stored. We'll set the variable,
+                    # but the displayed text in the combobox might not update. The plot will be correct.
+
+        # 5. Refresh UI and plot
+        self._toggle_spacing_widget()
+        self._toggle_minor_xticks_widgets()
+        self.schedule_update()
+        messagebox.showinfo("成功", "設定を読み込みました。", parent=self.master)
 
 if __name__ == '__main__':
     root = tk.Tk()
