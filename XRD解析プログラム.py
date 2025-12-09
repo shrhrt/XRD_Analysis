@@ -51,9 +51,9 @@ class XRDPlotter(tk.Frame):
         self.axis_label_fontsize_var, self.tick_label_fontsize_var = tk.DoubleVar(value=20), tk.DoubleVar(value=16)
         self.legend_fontsize_var, self.plot_linewidth_var = tk.DoubleVar(value=10), tk.DoubleVar(value=1.0)
         self.tick_direction_var = tk.StringVar(value='in')
-        self.xaxis_major_tick_spacing_var, self.show_grid_var = tk.DoubleVar(value=10), tk.BooleanVar(value=False)
+        self.xaxis_major_tick_spacing_var, self.show_grid_var = tk.DoubleVar(value=5), tk.BooleanVar(value=False)
         self.ytop_padding_factor_var = tk.DoubleVar(value=1.5)
-        self.hide_major_xtick_labels_var, self.show_minor_xticks_var = tk.BooleanVar(value=False), tk.BooleanVar(value=False)
+        self.hide_major_xtick_labels_var, self.show_minor_xticks_var = tk.BooleanVar(value=False), tk.BooleanVar(value=True)
         self.xminor_tick_spacing_var = tk.DoubleVar(value=1.0)
         self.peak_label_fontsize_var = tk.DoubleVar(value=9)
         self.peak_label_offset_var = tk.DoubleVar(value=0.4)
@@ -512,8 +512,15 @@ class XRDPlotter(tk.Frame):
 
     def save_settings(self):
         """Saves current plot settings to a JSON file."""
+        default_filename = ""
+        if self.file_listbox.size() > 0:
+            first_filepath = self.file_listbox.get(0)
+            legend_name = self.file_data.get(first_filepath, "")
+            default_filename = os.path.splitext(legend_name)[0]
+
         filepath = filedialog.asksaveasfilename(
             title="設定を保存",
+            initialfile=default_filename,
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
             defaultextension=".json",
             parent=self.master

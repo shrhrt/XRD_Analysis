@@ -175,8 +175,9 @@ def draw_plot(
     ax.set_xlabel(appearance.get('xlabel', '2θ/ω (degree)'), fontsize=appearance.get('axis_label_fontsize', 20))
     ax.set_ylabel(appearance.get('ylabel', 'Log Intensity (arb. Units)'), fontsize=appearance.get('axis_label_fontsize', 20))
     
-    ax.tick_params(axis='x', which='major', direction=appearance.get('tick_direction', 'in'), labelsize=appearance.get('tick_label_fontsize', 16))
+    ax.tick_params(axis='x', which='major', direction=appearance.get('tick_direction', 'in'), labelsize=appearance.get('tick_label_fontsize', 16), top=True)
     ax.tick_params(axis='x', labelbottom=not appearance.get('hide_major_xtick_labels', False))
+    ax.tick_params(axis='x', labeltop=not appearance.get('hide_major_xtick_labels', False))
 
     ax.set_xlim(x_range[0], x_range[1])
     ax.set_yscale('log')
@@ -184,7 +185,7 @@ def draw_plot(
     
     if appearance.get('show_minor_xticks', False):
         ax.xaxis.set_minor_locator(MultipleLocator(appearance.get('xminor_tick_spacing', 1.0)))
-        ax.tick_params(axis='x', which='minor', direction=appearance.get('tick_direction', 'in'), bottom=True)
+        ax.tick_params(axis='x', which='minor', direction=appearance.get('tick_direction', 'in'), bottom=True, top=True)
     else:
         ax.xaxis.set_minor_locator(NullLocator())
 
