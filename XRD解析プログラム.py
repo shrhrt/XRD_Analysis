@@ -88,6 +88,9 @@ class XRDPlotter(tk.Frame):
 
         self._debounce_job, self.file_data, self.parsed_data = None, {}, {}
         
+        # Register validation command
+        self.vcmd_float = (self.register(self._validate_float), '%P')
+
         self.fig = Figure(figsize=(6,4))
         self.ax = self.fig.add_subplot(111)
 
@@ -143,9 +146,9 @@ class XRDPlotter(tk.Frame):
         h_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.HORIZONTAL, command=self.file_listbox.xview); h_scrollbar.grid(row=1, column=0, sticky="ew"); self.file_listbox.config(xscrollcommand=h_scrollbar.set)
         
         graph_settings_frame = tk.LabelFrame(tab, text="グラフ設定"); graph_settings_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10)); graph_settings_frame.columnconfigure(1, weight=1)
-        tk.Label(graph_settings_frame, text="横軸 最小値:").grid(row=0, column=0, sticky="w", padx=5, pady=2); self.xmin_entry = tk.Entry(graph_settings_frame, textvariable=self.xmin_var); self.xmin_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(graph_settings_frame, text="横軸 最大値:").grid(row=1, column=0, sticky="w", padx=5, pady=2); self.xmax_entry = tk.Entry(graph_settings_frame, textvariable=self.xmax_var); self.xmax_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(graph_settings_frame, text="強度しきい値:").grid(row=2, column=0, sticky="w", padx=5, pady=2); self.threshold_entry = tk.Entry(graph_settings_frame, textvariable=self.threshold_var); self.threshold_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(graph_settings_frame, text="横軸 最小値:").grid(row=0, column=0, sticky="w", padx=5, pady=2); self.xmin_entry = tk.Entry(graph_settings_frame, textvariable=self.xmin_var, validate='all', validatecommand=self.vcmd_float); self.xmin_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(graph_settings_frame, text="横軸 最大値:").grid(row=1, column=0, sticky="w", padx=5, pady=2); self.xmax_entry = tk.Entry(graph_settings_frame, textvariable=self.xmax_var, validate='all', validatecommand=self.vcmd_float); self.xmax_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(graph_settings_frame, text="強度しきい値:").grid(row=2, column=0, sticky="w", padx=5, pady=2); self.threshold_entry = tk.Entry(graph_settings_frame, textvariable=self.threshold_var, validate='all', validatecommand=self.vcmd_float); self.threshold_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
         threshold_handling_frame = tk.Frame(graph_settings_frame); threshold_handling_frame.grid(row=3, column=0, columnspan=2, sticky="w", padx=5)
         tk.Label(threshold_handling_frame, text="しきい値以下のデータ:").pack(side="left")
         tk.Radiobutton(threshold_handling_frame, text="非表示", variable=self.threshold_handling_var, value="hide", command=self.schedule_update).pack(side="left")
@@ -293,6 +296,11 @@ class XRDPlotter(tk.Frame):
         return command
     
     def _get_current_plot_settings(self):
+        # Reset background colors on each attempt
+        self.xmin_entry.config(bg='white')
+        self.xmax_entry.config(bg='white')
+        self.threshold_entry.config(bg='white') # Also reset threshold entry
+
         filepaths = self.file_listbox.get(0, tk.END)
         plot_data_full = [{'label': self.file_data[fp], 'angles': self.parsed_data[fp][0], 'intensities': self.parsed_data[fp][1]} for fp in filepaths if fp in self.file_data and fp in self.parsed_data]
         
@@ -301,11 +309,17 @@ class XRDPlotter(tk.Frame):
             spacing = self.plot_spacing_var.get()
             xmin = float(self.xmin_var.get()) if self.xmin_var.get() else None
             xmax = float(self.xmax_var.get()) if self.xmax_var.get() else None
+
+            # Check for logical error between xmin and xmax
             if xmin is not None and xmax is not None and xmin >= xmax:
-                messagebox.showwarning("警告", "横軸の最小値は最大値より小さくしてください。")
-                return None
+                self.xmin_entry.config(bg='#FFDDDD') # Light red background
+                self.xmax_entry.config(bg='#FFDDDD')
+                return None # Prevent plot update, no messagebox
+
         except ValueError:
-            messagebox.showwarning("警告", "グラフ設定の数値が不正です。")
+            # This catches intermediate valid-while-typing states like "-", "1.e-", etc.
+            # or if validation was somehow bypassed.
+            # Just fail silently, the plot will update when input is valid.
             return None
             
         reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_name_vars[i].get().strip() and self.peak_angle_vars[i].get().strip()]
@@ -509,6 +523,19 @@ class XRDPlotter(tk.Frame):
             if (h**2 + k**2 + l**2) == 0: self.lc_result_var.set("エラー: (h,k,l)は(0,0,0)にできません"); return
             a = d * math.sqrt(h**2 + k**2 + l**2); self.lc_result_var.set(f"a = {a:.5f} Å")
         except (ValueError, TypeError): self.lc_result_var.set("エラー: 有効な数値を入力してください")
+
+    def _validate_float(self, P):
+        if P == "" or P == "-":
+            return True
+        try:
+            # Allow partial scientific notation
+            if P.lower().endswith('e') or P.lower().endswith('e-') or P.lower().endswith('e+'):
+                return True
+            float(P)
+            return True
+        except ValueError:
+            self.bell()
+            return False
 
     def save_settings(self):
         """Saves current plot settings to a JSON file."""
