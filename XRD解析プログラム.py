@@ -408,11 +408,24 @@ class XRDPlotter(tk.Frame):
         idx = selected_indices[0]
         if idx < self.file_listbox.size() - 1: filepath = self.file_listbox.get(idx); self.file_listbox.delete(idx); self.file_listbox.insert(idx + 1, filepath); self.file_listbox.selection_set(idx + 1); self.schedule_update()
 
+    def _get_legend_pos(self):
+        leg = self.ax.get_legend()
+        if leg and leg.get_visible():
+            try:
+                bbox = leg.get_window_extent()
+                bbox_axes = bbox.transformed(self.ax.transAxes.inverted())
+                return (bbox_axes.x0, bbox_axes.y0)
+            except Exception:
+                pass
+        return None
+
     def preview_figure(self):
         settings = self._get_current_plot_settings()
         if not settings or not settings['plot_data_full']:
             messagebox.showwarning("警告", "プレビュー対象のデータがありません。", parent=self.master)
             return
+        
+        settings['legend_position'] = self._get_legend_pos()
         
         try:
             width = float(self.export_width_var.get())
@@ -453,6 +466,8 @@ class XRDPlotter(tk.Frame):
         if not settings or not settings['plot_data_full']:
             messagebox.showwarning("警告", "保存対象のデータがありません。", parent=self.master)
             return
+            
+        settings['legend_position'] = self._get_legend_pos()
             
         try:
             width = float(self.export_width_var.get()); height = float(self.export_height_var.get())

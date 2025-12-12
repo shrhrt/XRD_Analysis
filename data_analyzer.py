@@ -74,7 +74,8 @@ def draw_plot(
     ax: plt.Axes, plot_data_full: List[Dict[str, Any]], threshold: float, x_range: Tuple[Optional[float], Optional[float]],
     reference_peaks: List[Dict[str, Any]], show_legend: bool, stack: bool, spacing: float, appearance: Dict[str, Any],
     bg_subtract_settings: Optional[Dict[str, Any]] = None,
-    peak_detection_settings: Optional[Dict[str, Any]] = None
+    peak_detection_settings: Optional[Dict[str, Any]] = None,
+    legend_position: Optional[Tuple[float, float]] = None
 ) -> Optional[str]:
     ax.clear()
     
@@ -198,8 +199,11 @@ def draw_plot(
         ax.grid(False)
     
     if show_legend:
-        leg = ax.legend(fontsize=legend_fontsize)
-        if leg: leg.set_draggable(True)
+        if legend_position:
+            ax.legend(fontsize=legend_fontsize, loc='lower left', bbox_to_anchor=legend_position)
+        else:
+            leg = ax.legend(fontsize=legend_fontsize)
+            if leg: leg.set_draggable(True)
 
     _draw_reference_peaks(ax, reference_peaks, ymax=ax.get_ylim()[1], appearance=appearance)
 
