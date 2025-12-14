@@ -45,7 +45,10 @@ class XRDPlotter(tk.Frame):
         self.xmin_var, self.xmax_var = tk.StringVar(value="30"), tk.StringVar(value="130")
         self.threshold_var, self.legend_name_var = tk.StringVar(value="1"), tk.StringVar()
         self.show_legend_var, self.stack_plots_var = tk.BooleanVar(value=True), tk.BooleanVar(value=False)
-        self.threshold_handling_var = tk.StringVar(value="hide") # "hide" or "clip"
+        self.legend_loc_var = tk.StringVar(value="best")
+        self.legend_frame_var = tk.BooleanVar(value=True)
+        self.legend_bgcolor_var = tk.StringVar(value="white")
+        self.threshold_handling_var = tk.StringVar(value="clip") # "hide" or "clip"
         self.plot_spacing_var = tk.DoubleVar(value=3)
         self.xlabel_var, self.ylabel_var = tk.StringVar(value="2θ/ω (degree)"), tk.StringVar(value="Log Intensity (arb. Units)")
         self.axis_label_fontsize_var, self.tick_label_fontsize_var = tk.DoubleVar(value=20), tk.DoubleVar(value=16)
@@ -67,20 +70,19 @@ class XRDPlotter(tk.Frame):
         self._savable_vars = [
             'xmin_var', 'xmax_var', 'threshold_var', 'show_legend_var', 'stack_plots_var',
             'threshold_handling_var', 'plot_spacing_var', 'xlabel_var', 'ylabel_var',
+            'legend_loc_var', 'legend_frame_var', 'legend_bgcolor_var',
             'axis_label_fontsize_var', 'tick_label_fontsize_var', 'legend_fontsize_var',
             'plot_linewidth_var', 'tick_direction_var', 'xaxis_major_tick_spacing_var',
             'show_grid_var', 'ytop_padding_factor_var', 'hide_major_xtick_labels_var',
             'show_minor_xticks_var', 'xminor_tick_spacing_var', 'peak_label_fontsize_var',
             'peak_label_offset_var', 'd_spacing_input_2theta_var', 'lc_input_d_var',
             'lc_h_var', 'lc_k_var', 'lc_l_var', 'export_width_var', 'export_height_var',
-            'export_format_var', 'bg_subtract_enabled_var', 'bg_subtract_window_var',
+            'export_format_var',
             'peak_detection_enabled_var', 'peak_detection_height_var',
             'peak_detection_prominence_var', 'peak_detection_width_var'
         ]
         
         # Analysis settings
-        self.bg_subtract_enabled_var = tk.BooleanVar(value=False)
-        self.bg_subtract_window_var = tk.IntVar(value=50)
         self.peak_detection_enabled_var = tk.BooleanVar(value=False)
         self.peak_detection_height_var = tk.DoubleVar(value=10)
         self.peak_detection_prominence_var = tk.DoubleVar(value=10)
@@ -154,10 +156,16 @@ class XRDPlotter(tk.Frame):
         tk.Radiobutton(threshold_handling_frame, text="非表示", variable=self.threshold_handling_var, value="hide", command=self.schedule_update).pack(side="left")
         tk.Radiobutton(threshold_handling_frame, text="最小値に固定", variable=self.threshold_handling_var, value="clip", command=self.schedule_update).pack(side="left")
         tk.Label(graph_settings_frame, text="凡例名:").grid(row=4, column=0, sticky="w", padx=5, pady=2); self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled"); self.legend_name_entry.grid(row=4, column=1, sticky="ew", padx=5, pady=2)
-        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.toggle_legend_visibility); self.show_legend_check.grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=2)
-        tk.Checkbutton(graph_settings_frame, text="グラフを縦に並べる", variable=self.stack_plots_var, command=self._toggle_spacing_widget).grid(row=6, column=0, columnspan=2, sticky="w", padx=5, pady=2)
-        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n)"); self.spacing_label.grid(row=7, column=0, sticky="w", padx=5, pady=2)
-        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=7, column=1, sticky="ew", padx=5, pady=2)
+        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.schedule_update); self.show_legend_check.grid(row=5, column=0, sticky="w", padx=5, pady=2)
+        self.legend_loc_combo = ttk.Combobox(graph_settings_frame, textvariable=self.legend_loc_var, values=['best', 'upper right', 'upper left', 'lower left', 'lower right', 'right', 'center left', 'center right', 'lower center', 'upper center', 'center'], state="readonly"); self.legend_loc_combo.grid(row=5, column=1, sticky="ew", padx=5, pady=2); self.legend_loc_combo.bind("<<ComboboxSelected>>", self.schedule_update)
+        
+        legend_style_frame = tk.Frame(graph_settings_frame); legend_style_frame.grid(row=6, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        tk.Checkbutton(legend_style_frame, text="枠線", variable=self.legend_frame_var, command=self.schedule_update).pack(side="left")
+        tk.Label(legend_style_frame, text="背景色:").pack(side="left", padx=(10, 2)); self.legend_bg_button = tk.Button(legend_style_frame, text="■", width=2, relief=tk.SUNKEN, command=self._choose_legend_bgcolor); self.legend_bg_button.pack(side="left"); self.legend_bgcolor_var.trace_add("write", lambda *args: self.legend_bg_button.config(fg=self.legend_bgcolor_var.get())); self.legend_bg_button.config(fg=self.legend_bgcolor_var.get())
+
+        tk.Checkbutton(graph_settings_frame, text="グラフを縦に並べる", variable=self.stack_plots_var, command=self._toggle_spacing_widget).grid(row=7, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n)"); self.spacing_label.grid(row=8, column=0, sticky="w", padx=5, pady=2)
+        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=8, column=1, sticky="ew", padx=5, pady=2)
         self.xmin_entry.bind("<FocusOut>", self.schedule_update); self.xmin_entry.bind("<Return>", self.schedule_update); self.xmax_entry.bind("<FocusOut>", self.schedule_update); self.xmax_entry.bind("<Return>", self.schedule_update); self.threshold_var.trace_add("write", self.schedule_update); self.legend_name_var.trace_add("write", self.on_legend_name_change)
         
         container = tk.LabelFrame(tab, text="参照ピーク設定"); container.grid(row=2, column=0, sticky="nsew"); container.rowconfigure(2, weight=1); container.columnconfigure(0, weight=1)
@@ -224,14 +232,8 @@ class XRDPlotter(tk.Frame):
         tk.Button(lc_frame, text="計算", command=self.calculate_lattice_constant).grid(row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=5)
         tk.Label(lc_frame, textvariable=self.lc_result_var, relief="sunken").grid(row=4, column=0, columnspan=3, sticky="ew", padx=5, pady=5)
 
-        # Background subtraction
-        bg_frame = tk.LabelFrame(analysis_frame, text="バックグラウンド除去"); bg_frame.grid(row=2, column=0, sticky="ew", pady=5); bg_frame.columnconfigure(1, weight=1)
-        tk.Checkbutton(bg_frame, text="有効化", variable=self.bg_subtract_enabled_var, command=self.schedule_update).grid(row=0, column=0, sticky="w", padx=5)
-        tk.Label(bg_frame, text="ウィンドウサイズ:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
-        ttk.Spinbox(bg_frame, textvariable=self.bg_subtract_window_var, from_=1, to=1000, command=self.schedule_update, width=10).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-
         # Peak detection
-        peak_frame = tk.LabelFrame(analysis_frame, text="ピーク検出"); peak_frame.grid(row=3, column=0, sticky="ew", pady=5); peak_frame.columnconfigure(1, weight=1)
+        peak_frame = tk.LabelFrame(analysis_frame, text="ピーク検出"); peak_frame.grid(row=2, column=0, sticky="ew", pady=5); peak_frame.columnconfigure(1, weight=1)
         tk.Checkbutton(peak_frame, text="有効化", variable=self.peak_detection_enabled_var, command=self.schedule_update).grid(row=0, column=0, columnspan=2, sticky="w", padx=5)
         tk.Label(peak_frame, text="最小高さ:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
         ttk.Spinbox(peak_frame, textvariable=self.peak_detection_height_var, from_=0, to=1e9, increment=10, command=self.schedule_update).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
@@ -295,6 +297,12 @@ class XRDPlotter(tk.Frame):
             if color_code and color_code[1]: self.peak_color_vars[index].set(color_code[1]); self.peak_color_buttons[index].config(fg=color_code[1]); self.schedule_update()
         return command
     
+    def _choose_legend_bgcolor(self):
+        from tkinter import colorchooser
+        color = colorchooser.askcolor(title="凡例の背景色", initialcolor=self.legend_bgcolor_var.get())
+        if color and color[1]:
+            self.legend_bgcolor_var.set(color[1]); self.schedule_update()
+
     def _get_current_plot_settings(self):
         # Reset background colors on each attempt
         self.xmin_entry.config(bg='white')
@@ -329,12 +337,9 @@ class XRDPlotter(tk.Frame):
             'legend_fontsize': self.legend_fontsize_var.get(), 'linewidth': self.plot_linewidth_var.get(), 'tick_direction': self.tick_direction_var.get(), 'threshold_handling': self.threshold_handling_var.get(),
             'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get(), 'ytop_padding_factor': self.ytop_padding_factor_var.get(),
             'hide_major_xtick_labels': self.hide_major_xtick_labels_var.get(), 'show_minor_xticks': self.show_minor_xticks_var.get(), 'xminor_tick_spacing': self.xminor_tick_spacing_var.get(),
-            'peak_label_fontsize': self.peak_label_fontsize_var.get(), 'peak_label_offset': self.peak_label_offset_var.get()
-        }
-
-        bg_subtract_settings = {
-            'enabled': self.bg_subtract_enabled_var.get(),
-            'window_size': self.bg_subtract_window_var.get()
+            'peak_label_fontsize': self.peak_label_fontsize_var.get(), 'peak_label_offset': self.peak_label_offset_var.get(),
+            'legend_loc': self.legend_loc_var.get(),
+            'legend_frame': self.legend_frame_var.get(), 'legend_bgcolor': self.legend_bgcolor_var.get()
         }
 
         peak_detection_settings = {
@@ -348,7 +353,7 @@ class XRDPlotter(tk.Frame):
             'plot_data_full': plot_data_full, 'threshold': threshold, 'x_range': (xmin, xmax), 
             'reference_peaks': reference_peaks, 'show_legend': self.show_legend_var.get(), 
             'stack': self.stack_plots_var.get(), 'spacing': spacing, 'appearance': appearance_settings,
-            'bg_subtract_settings': bg_subtract_settings, 'peak_detection_settings': peak_detection_settings
+            'peak_detection_settings': peak_detection_settings
         }
 
     def update_plot(self):

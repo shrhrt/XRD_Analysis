@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, NullLocator
 import numpy as np
 from typing import List, Tuple, Dict, Optional, Any
-from scipy.ndimage import minimum_filter1d
 from scipy.signal import find_peaks
 
 # parse_ras_file は draw_plot から切り離され、呼び出し元で処理される
@@ -22,21 +21,6 @@ def parse_ras_file(filepath: str) -> Tuple[Optional[np.ndarray], Optional[np.nda
                     except (ValueError, IndexError): continue
     except Exception: return None, None
     return np.array(angles, dtype=float), np.array(intensities, dtype=float)
-
-def subtract_background(intensities: np.ndarray, window_size: int = 50) -> np.ndarray:
-    """
-    SNIP (simple nonlinear iterative peak-clipping) アルゴリズムに基づいてバックグラウンドを推定し、差し引く。
-    Scipyのminimum_filter1dを使用して効率的に実装。
-    """
-    if window_size <= 0:
-        return intensities
-        
-    # SNIPアルゴリズムは、異なるウィンドウサイズで複数回フィルタリングを適用する
-    # ここでは簡略化し、指定されたウィンドウサイズで1回適用する
-    background = minimum_filter1d(intensities, size=window_size)
-    corrected_intensities = intensities - background
-    corrected_intensities[corrected_intensities < 0] = 0
-    return corrected_intensities
 
 def _find_and_draw_peaks(ax: plt.Axes, angles: np.ndarray, intensities: np.ndarray, ymax: float, settings: Dict[str, Any]):
     if not settings.get('enabled', False):
@@ -73,7 +57,6 @@ def _draw_reference_peaks(ax: plt.Axes, peaks_to_plot: List[Dict[str, Any]], yma
 def draw_plot(
     ax: plt.Axes, plot_data_full: List[Dict[str, Any]], threshold: float, x_range: Tuple[Optional[float], Optional[float]],
     reference_peaks: List[Dict[str, Any]], show_legend: bool, stack: bool, spacing: float, appearance: Dict[str, Any],
-    bg_subtract_settings: Optional[Dict[str, Any]] = None,
     peak_detection_settings: Optional[Dict[str, Any]] = None,
     legend_position: Optional[Tuple[float, float]] = None
 ) -> Optional[str]:
@@ -83,6 +66,7 @@ def draw_plot(
     legend_fontsize = appearance.get('legend_fontsize', 10)
     ytop_padding_factor = appearance.get('ytop_padding_factor', 1.5)
     threshold_handling = appearance.get('threshold_handling', 'hide') # 'hide' or 'clip'
+    yscale = appearance.get('yscale', 'log')
 
     color_sequence = ['red', '#001aff', '#32CD32', '#FF8C00', '#9400D3', '#00CED1', '#FF1493', '#1E90FF', '#FFD700', '#ADFF2F']
 
@@ -91,15 +75,10 @@ def draw_plot(
 
     processed_data = []
 
-    # ステップ0: バックグラウンド補正と閾値処理を適用
+    # ステップ0: データを準備
     for item in plot_data_full:
         angles = item['angles']
         intensities = np.array(item['intensities'], dtype=float)
-
-        # バックグラウンド補正
-        if bg_subtract_settings and bg_subtract_settings.get('enabled', False):
-            window = bg_subtract_settings.get('window_size', 50)
-            intensities = subtract_background(intensities, window)
 
         processed_data.append({'label': item['label'], 'angles': angles, 'intensities': intensities})
 
@@ -128,6 +107,7 @@ def draw_plot(
     # ステップ2: Y軸の範囲を計算
     if not all_plot_points_y or np.all(np.isnan(all_plot_points_y)):
         ymin_val, ymax_val = 1, 10
+        ymin_val, ymax_val = (1, 10) if yscale == 'log' else (0, 100)
     else:
         with np.errstate(all='ignore'):
             min_all_y = np.nanmin(all_plot_points_y)
@@ -181,6 +161,7 @@ def draw_plot(
 
     ax.set_xlim(x_range[0], x_range[1])
     ax.set_yscale('log')
+    ax.set_yscale(yscale)
     ax.xaxis.set_major_locator(MultipleLocator(appearance.get('xaxis_major_tick_spacing', 10)))
     
     if appearance.get('show_minor_xticks', False):
@@ -199,10 +180,13 @@ def draw_plot(
         ax.grid(False)
     
     if show_legend:
+        frameon = appearance.get('legend_frame', True)
+        facecolor = appearance.get('legend_bgcolor', 'white')
         if legend_position:
-            ax.legend(fontsize=legend_fontsize, loc='lower left', bbox_to_anchor=legend_position)
+            ax.legend(fontsize=legend_fontsize, loc='lower left', bbox_to_anchor=legend_position, frameon=frameon, facecolor=facecolor)
         else:
-            leg = ax.legend(fontsize=legend_fontsize)
+            loc = appearance.get('legend_loc', 'best')
+            leg = ax.legend(fontsize=legend_fontsize, loc=loc, frameon=frameon, facecolor=facecolor)
             if leg: leg.set_draggable(True)
 
     _draw_reference_peaks(ax, reference_peaks, ymax=ax.get_ylim()[1], appearance=appearance)
