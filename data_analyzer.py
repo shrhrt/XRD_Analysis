@@ -43,16 +43,19 @@ def _find_and_draw_peaks(ax: plt.Axes, angles: np.ndarray, intensities: np.ndarr
 
 def _draw_reference_peaks(ax: plt.Axes, peaks_to_plot: List[Dict[str, Any]], ymax: float, appearance: Dict[str, Any]):
     if not peaks_to_plot: return
+    
+    peak_fontsize = appearance.get('peak_label_fontsize', 9)
+    offset = appearance.get('peak_label_offset', 0.4)
+    label_y = appearance.get('peak_label_y', 0.9)
+
     for peak in peaks_to_plot:
         if not peak.get('visible', False): continue
         name, angle = peak.get('name', ''), peak.get('angle')
         color, linestyle = peak.get('color', 'black'), peak.get('linestyle', '--')
         if angle is not None:
             ax.axvline(x=angle, color=color, linestyle=linestyle, linewidth=1.2, ymax=1.0)
-            peak_fontsize = appearance.get('peak_label_fontsize', 9)
-            offset = appearance.get('peak_label_offset', 0.4)
-            ax.text(angle + offset, ymax * 0.9, name, rotation=90, verticalalignment='top', 
-                    horizontalalignment='left', color=color, fontsize=peak_fontsize, fontweight='bold')
+            ax.text(angle + offset, label_y, name, rotation=90, verticalalignment='top', 
+                    horizontalalignment='left', color=color, fontsize=peak_fontsize, fontweight='bold', transform=ax.get_xaxis_transform())
 
 def draw_plot(
     ax: plt.Axes, plot_data_full: List[Dict[str, Any]], threshold: float, x_range: Tuple[Optional[float], Optional[float]],
@@ -67,6 +70,7 @@ def draw_plot(
     ytop_padding_factor = appearance.get('ytop_padding_factor', 1.5)
     threshold_handling = appearance.get('threshold_handling', 'hide') # 'hide' or 'clip'
     yscale = appearance.get('yscale', 'log')
+    font_family = appearance.get('font_family', 'sans-serif')
 
     color_sequence = ['red', '#001aff', '#32CD32', '#FF8C00', '#9400D3', '#00CED1', '#FF1493', '#1E90FF', '#FFD700', '#ADFF2F']
 
@@ -153,8 +157,8 @@ def draw_plot(
 
     ax.set_ylim(bottom=ymin_val, top=ymax_val)
 
-    ax.set_xlabel(appearance.get('xlabel', '2θ/ω (degree)'), fontsize=appearance.get('axis_label_fontsize', 20))
-    ax.set_ylabel(appearance.get('ylabel', 'Log Intensity (arb. Units)'), fontsize=appearance.get('axis_label_fontsize', 20))
+    ax.set_xlabel(appearance.get('xlabel', '2θ/ω (degree)'), fontsize=appearance.get('axis_label_fontsize', 20), fontfamily=font_family)
+    ax.set_ylabel(appearance.get('ylabel', 'Log Intensity (arb. Units)'), fontsize=appearance.get('axis_label_fontsize', 20), fontfamily=font_family)
     
     ax.tick_params(axis='x', which='major', direction=appearance.get('tick_direction', 'in'), labelsize=appearance.get('tick_label_fontsize', 16), top=True, labeltop=False)
     ax.tick_params(axis='x', labelbottom=not appearance.get('hide_major_xtick_labels', False))
@@ -183,11 +187,18 @@ def draw_plot(
         frameon = appearance.get('legend_frame', True)
         facecolor = appearance.get('legend_bgcolor', 'white')
         if legend_position:
-            ax.legend(fontsize=legend_fontsize, loc='lower left', bbox_to_anchor=legend_position, frameon=frameon, facecolor=facecolor)
+            leg = ax.legend(fontsize=legend_fontsize, loc='lower left', bbox_to_anchor=legend_position, frameon=frameon, facecolor=facecolor)
         else:
             loc = appearance.get('legend_loc', 'best')
             leg = ax.legend(fontsize=legend_fontsize, loc=loc, frameon=frameon, facecolor=facecolor)
             if leg: leg.set_draggable(True)
+        if leg:
+            style = 'italic' if appearance.get('legend_italic', False) else 'normal'
+            plt.setp(leg.get_texts(), fontfamily=font_family, style=style)
+
+    # Apply font to tick labels
+    for label in ax.get_xticklabels() + ax.get_yticklabels():
+        label.set_fontfamily(font_family)
 
     _draw_reference_peaks(ax, reference_peaks, ymax=ax.get_ylim()[1], appearance=appearance)
 

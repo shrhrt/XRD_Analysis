@@ -5,6 +5,7 @@ import numpy as np
 import math
 from matplotlib.figure import Figure
 
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import data_analyzer
@@ -17,21 +18,6 @@ class XRDPlotter(tk.Frame):
             {'name': '(400)', 'angle': '43.1'}, {'name': '(422)', 'angle': '53.4'},
             {'name': '(511)', 'angle': '57.0'}, {'name': '(440)', 'angle': '62.6'}
         ],
-        "LiTi2O4": [
-            {'name': '(111)', 'angle': '18.3'}, {'name': '(311)', 'angle': '35.5'},
-            {'name': '(400)', 'angle': '43.1'}, {'name': '(331)', 'angle': '57.0'},
-            {'name': '(440)', 'angle': '62.6'}
-        ],
-        "Li4Ti5O12": [
-            {'name': '(111)', 'angle': '18.0'}, {'name': '(311)', 'angle': '35.4'},
-            {'name': '(400)', 'angle': '43.1'}, {'name': '(511)', 'angle': '57.0'},
-            {'name': '(440)', 'angle': '62.5'}
-        ],
-        "TiO2": [
-            {'name': '(101)', 'angle': '25.3'}, {'name': '(004)', 'angle': '37.8'},
-            {'name': '(200)', 'angle': '48.0'}, {'name': '(105)', 'angle': '53.9'},
-            {'name': '(211)', 'angle': '55.1'}
-        ]
     }
 
     def __init__(self, master=None):
@@ -48,7 +34,10 @@ class XRDPlotter(tk.Frame):
         self.legend_loc_var = tk.StringVar(value="best")
         self.legend_frame_var = tk.BooleanVar(value=True)
         self.legend_bgcolor_var = tk.StringVar(value="white")
+        self.legend_italic_var = tk.BooleanVar(value=False)
         self.threshold_handling_var = tk.StringVar(value="clip") # "hide" or "clip"
+        self.yscale_var = tk.StringVar(value="log")
+        self.font_family_var = tk.StringVar(value="sans-serif")
         self.plot_spacing_var = tk.DoubleVar(value=3)
         self.xlabel_var, self.ylabel_var = tk.StringVar(value="2θ/ω (degree)"), tk.StringVar(value="Log Intensity (arb. Units)")
         self.axis_label_fontsize_var, self.tick_label_fontsize_var = tk.DoubleVar(value=20), tk.DoubleVar(value=16)
@@ -60,6 +49,8 @@ class XRDPlotter(tk.Frame):
         self.xminor_tick_spacing_var = tk.DoubleVar(value=1.0)
         self.peak_label_fontsize_var = tk.DoubleVar(value=9)
         self.peak_label_offset_var = tk.DoubleVar(value=0.4)
+        self.peak_label_y_var = tk.DoubleVar(value=0.90)
+        self.match_math_font_var = tk.BooleanVar(value=False)
         self.d_spacing_input_2theta_var, self.d_spacing_result_var = tk.StringVar(), tk.StringVar(value="d-spacing (Å)")
         self.lc_input_d_var, self.lc_h_var, self.lc_k_var, self.lc_l_var = tk.StringVar(), tk.StringVar(value="1"), tk.StringVar(value="0"), tk.StringVar(value="0")
         self.lc_result_var = tk.StringVar(value="a = ?")
@@ -70,12 +61,12 @@ class XRDPlotter(tk.Frame):
         self._savable_vars = [
             'xmin_var', 'xmax_var', 'threshold_var', 'show_legend_var', 'stack_plots_var',
             'threshold_handling_var', 'plot_spacing_var', 'xlabel_var', 'ylabel_var',
-            'legend_loc_var', 'legend_frame_var', 'legend_bgcolor_var',
+            'legend_loc_var', 'legend_frame_var', 'legend_bgcolor_var', 'legend_italic_var', 'yscale_var', 'font_family_var',
             'axis_label_fontsize_var', 'tick_label_fontsize_var', 'legend_fontsize_var',
             'plot_linewidth_var', 'tick_direction_var', 'xaxis_major_tick_spacing_var',
             'show_grid_var', 'ytop_padding_factor_var', 'hide_major_xtick_labels_var',
             'show_minor_xticks_var', 'xminor_tick_spacing_var', 'peak_label_fontsize_var',
-            'peak_label_offset_var', 'd_spacing_input_2theta_var', 'lc_input_d_var',
+            'peak_label_offset_var', 'peak_label_y_var', 'match_math_font_var', 'd_spacing_input_2theta_var', 'lc_input_d_var',
             'lc_h_var', 'lc_k_var', 'lc_l_var', 'export_width_var', 'export_height_var',
             'export_format_var',
             'peak_detection_enabled_var', 'peak_detection_height_var',
@@ -121,10 +112,11 @@ class XRDPlotter(tk.Frame):
         left_panel.rowconfigure(0, weight=1); left_panel.columnconfigure(0, weight=1)
 
         notebook = ttk.Notebook(left_panel); notebook.grid(row=0, column=0, sticky="nsew")
-        plot_settings_tab, appearance_tab, analysis_tab, export_tab = tk.Frame(notebook), tk.Frame(notebook), tk.Frame(notebook), tk.Frame(notebook)
-        notebook.add(plot_settings_tab, text="プロット設定"); notebook.add(appearance_tab, text="外観設定"); notebook.add(analysis_tab, text="解析ツール"); notebook.add(export_tab, text="エクスポート")
+        plot_settings_tab, reference_peaks_tab, appearance_tab, analysis_tab, export_tab = tk.Frame(notebook), tk.Frame(notebook), tk.Frame(notebook), tk.Frame(notebook), tk.Frame(notebook)
+        notebook.add(plot_settings_tab, text="プロット設定"); notebook.add(reference_peaks_tab, text="参照ピーク"); notebook.add(appearance_tab, text="外観設定"); notebook.add(analysis_tab, text="解析ツール"); notebook.add(export_tab, text="エクスポート")
         
         self.build_plot_settings_tab(plot_settings_tab)
+        self.build_reference_peaks_tab(reference_peaks_tab)
         self.build_appearance_tab(appearance_tab)
         self.build_analysis_tab(analysis_tab)
         self.build_export_tab(export_tab)
@@ -136,7 +128,7 @@ class XRDPlotter(tk.Frame):
         self._toggle_spacing_widget(); self._toggle_minor_xticks_widgets(); self.update_plot()
 
     def build_plot_settings_tab(self, tab):
-        tab.rowconfigure(2, weight=1); tab.columnconfigure(0, weight=1)
+        tab.columnconfigure(0, weight=1)
         file_frame = tk.LabelFrame(tab, text="ファイル設定"); file_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10)); file_frame.columnconfigure(0, weight=1)
         file_button_frame = tk.Frame(file_frame); file_button_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5); file_button_frame.columnconfigure(0, weight=1); file_button_frame.columnconfigure(1, weight=1); file_button_frame.columnconfigure(2, weight=1)
         tk.Button(file_button_frame, text="ファイルを選択", command=self.select_files).grid(row=0, column=0, sticky="ew", padx=(0, 2))
@@ -155,36 +147,45 @@ class XRDPlotter(tk.Frame):
         tk.Label(threshold_handling_frame, text="しきい値以下のデータ:").pack(side="left")
         tk.Radiobutton(threshold_handling_frame, text="非表示", variable=self.threshold_handling_var, value="hide", command=self.schedule_update).pack(side="left")
         tk.Radiobutton(threshold_handling_frame, text="最小値に固定", variable=self.threshold_handling_var, value="clip", command=self.schedule_update).pack(side="left")
-        tk.Label(graph_settings_frame, text="凡例名:").grid(row=4, column=0, sticky="w", padx=5, pady=2); self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled"); self.legend_name_entry.grid(row=4, column=1, sticky="ew", padx=5, pady=2)
-        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.schedule_update); self.show_legend_check.grid(row=5, column=0, sticky="w", padx=5, pady=2)
-        self.legend_loc_combo = ttk.Combobox(graph_settings_frame, textvariable=self.legend_loc_var, values=['best', 'upper right', 'upper left', 'lower left', 'lower right', 'right', 'center left', 'center right', 'lower center', 'upper center', 'center'], state="readonly"); self.legend_loc_combo.grid(row=5, column=1, sticky="ew", padx=5, pady=2); self.legend_loc_combo.bind("<<ComboboxSelected>>", self.schedule_update)
+        yscale_frame = tk.Frame(graph_settings_frame); yscale_frame.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        tk.Label(yscale_frame, text="Y軸スケール:").pack(side="left")
+        tk.Radiobutton(yscale_frame, text="Log", variable=self.yscale_var, value="log", command=self.schedule_update).pack(side="left"); tk.Radiobutton(yscale_frame, text="Linear", variable=self.yscale_var, value="linear", command=self.schedule_update).pack(side="left")
+        tk.Label(graph_settings_frame, text="凡例名 (数式は$で囲む):").grid(row=5, column=0, sticky="w", padx=5, pady=2); self.legend_name_entry = tk.Entry(graph_settings_frame, textvariable=self.legend_name_var, state="disabled"); self.legend_name_entry.grid(row=5, column=1, sticky="ew", padx=5, pady=2)
+        self.show_legend_check = tk.Checkbutton(graph_settings_frame, text="凡例を表示する", variable=self.show_legend_var, command=self.schedule_update); self.show_legend_check.grid(row=6, column=0, sticky="w", padx=5, pady=2)
+        self.legend_loc_combo = ttk.Combobox(graph_settings_frame, textvariable=self.legend_loc_var, values=['best', 'upper right', 'upper left', 'lower left', 'lower right', 'right', 'center left', 'center right', 'lower center', 'upper center', 'center'], state="readonly"); self.legend_loc_combo.grid(row=6, column=1, sticky="ew", padx=5, pady=2); self.legend_loc_combo.bind("<<ComboboxSelected>>", self.schedule_update)
         
-        legend_style_frame = tk.Frame(graph_settings_frame); legend_style_frame.grid(row=6, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        legend_style_frame = tk.Frame(graph_settings_frame); legend_style_frame.grid(row=7, column=0, columnspan=2, sticky="w", padx=5, pady=2)
         tk.Checkbutton(legend_style_frame, text="枠線", variable=self.legend_frame_var, command=self.schedule_update).pack(side="left")
+        tk.Checkbutton(legend_style_frame, text="イタリック", variable=self.legend_italic_var, command=self.schedule_update).pack(side="left")
         tk.Label(legend_style_frame, text="背景色:").pack(side="left", padx=(10, 2)); self.legend_bg_button = tk.Button(legend_style_frame, text="■", width=2, relief=tk.SUNKEN, command=self._choose_legend_bgcolor); self.legend_bg_button.pack(side="left"); self.legend_bgcolor_var.trace_add("write", lambda *args: self.legend_bg_button.config(fg=self.legend_bgcolor_var.get())); self.legend_bg_button.config(fg=self.legend_bgcolor_var.get())
 
-        tk.Checkbutton(graph_settings_frame, text="グラフを縦に並べる", variable=self.stack_plots_var, command=self._toggle_spacing_widget).grid(row=7, column=0, columnspan=2, sticky="w", padx=5, pady=2)
-        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n)"); self.spacing_label.grid(row=8, column=0, sticky="w", padx=5, pady=2)
-        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=8, column=1, sticky="ew", padx=5, pady=2)
+        tk.Checkbutton(graph_settings_frame, text="グラフを縦に並べる", variable=self.stack_plots_var, command=self._toggle_spacing_widget).grid(row=8, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        self.spacing_label = tk.Label(graph_settings_frame, text="グラフの間隔 (10^n)"); self.spacing_label.grid(row=9, column=0, sticky="w", padx=5, pady=2)
+        self.spacing_entry = tk.Scale(graph_settings_frame, variable=self.plot_spacing_var, orient=tk.HORIZONTAL, from_=0, to=5, resolution=0.1, command=self.schedule_update); self.spacing_entry.grid(row=9, column=1, sticky="ew", padx=5, pady=2)
         self.xmin_entry.bind("<FocusOut>", self.schedule_update); self.xmin_entry.bind("<Return>", self.schedule_update); self.xmax_entry.bind("<FocusOut>", self.schedule_update); self.xmax_entry.bind("<Return>", self.schedule_update); self.threshold_var.trace_add("write", self.schedule_update); self.legend_name_var.trace_add("write", self.on_legend_name_change)
         
-        container = tk.LabelFrame(tab, text="参照ピーク設定"); container.grid(row=2, column=0, sticky="nsew"); container.rowconfigure(2, weight=1); container.columnconfigure(0, weight=1)
-        preset_frame = tk.Frame(container); preset_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=(5,0)); preset_frame.columnconfigure(1, weight=1)
-        tk.Label(preset_frame, text="プリセット読込:").grid(row=0, column=0, sticky="w")
+    def build_reference_peaks_tab(self, tab):
+        tab.columnconfigure(0, weight=1); tab.rowconfigure(1, weight=1)
+        
+        top_container = tk.Frame(tab, padx=10, pady=10); top_container.grid(row=0, column=0, sticky="ew")
+        top_container.columnconfigure(1, weight=1)
+        
+        preset_frame = tk.Frame(top_container); preset_frame.pack(fill="x", pady=(0, 5))
+        tk.Label(preset_frame, text="プリセット読込:").pack(side="left")
         menubutton = tk.Menubutton(preset_frame, text="物質を選択...", relief=tk.RAISED, anchor="w")
-        menubutton.grid(row=0, column=1, sticky="ew")
+        menubutton.pack(side="left", fill="x", expand=True, padx=5)
         self._build_peak_preset_menu(menubutton)
         
-        peak_opts_frame = tk.Frame(container)
-        peak_opts_frame.grid(row=1, column=0, sticky="ew", padx=5)
-        peak_opts_frame.columnconfigure(1, weight=1)
-        peak_opts_frame.columnconfigure(3, weight=1)
-        tk.Label(peak_opts_frame, text="フォントサイズ:").grid(row=0, column=0, sticky="w")
-        ttk.Spinbox(peak_opts_frame, textvariable=self.peak_label_fontsize_var, from_=1, to=100, command=self.schedule_update, width=5).grid(row=0, column=1, sticky="w")
-        tk.Label(peak_opts_frame, text="ラベルオフセット:").grid(row=0, column=2, sticky="w", padx=(10,0))
-        ttk.Spinbox(peak_opts_frame, textvariable=self.peak_label_offset_var, from_=0.1, to=5, increment=0.1, command=self.schedule_update, width=5).grid(row=0, column=3, sticky="w")
+        peak_opts_frame = tk.Frame(top_container); peak_opts_frame.pack(fill="x")
+        tk.Label(peak_opts_frame, text="フォントサイズ:").pack(side="left")
+        ttk.Spinbox(peak_opts_frame, textvariable=self.peak_label_fontsize_var, from_=1, to=100, command=self.schedule_update, width=5).pack(side="left", padx=5)
+        tk.Label(peak_opts_frame, text="Y位置(0-1):").pack(side="left", padx=(10,0))
+        ttk.Spinbox(peak_opts_frame, textvariable=self.peak_label_y_var, from_=0.0, to=1.0, increment=0.05, command=self.schedule_update, width=5).pack(side="left", padx=5)
+        tk.Label(peak_opts_frame, text="ラベルオフセット:").pack(side="left", padx=(10,0))
+        ttk.Spinbox(peak_opts_frame, textvariable=self.peak_label_offset_var, from_=0.1, to=5, increment=0.1, command=self.schedule_update, width=5).pack(side="left", padx=5)
 
-        canvas_container = tk.Frame(container); canvas_container.grid(row=2, column=0, sticky="nsew"); canvas_container.rowconfigure(0, weight=1); canvas_container.columnconfigure(0, weight=1)
+        canvas_container = tk.LabelFrame(tab, text="ピークリスト"); canvas_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        canvas_container.rowconfigure(0, weight=1); canvas_container.columnconfigure(0, weight=1)
         canvas = tk.Canvas(canvas_container, borderwidth=0, highlightthickness=0); canvas.grid(row=0, column=0, sticky="nsew"); scrollbar = tk.Scrollbar(canvas_container, orient="vertical", command=canvas.yview); scrollbar.grid(row=0, column=1, sticky="ns"); canvas.configure(yscrollcommand=scrollbar.set); self.peak_frame = tk.Frame(canvas); canvas.create_window((0, 0), window=self.peak_frame, anchor="nw"); self.peak_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))); self.peak_frame.columnconfigure(2, weight=1); self.peak_frame.columnconfigure(3, weight=1)
         tk.Label(self.peak_frame, text="表示").grid(row=0, column=1); tk.Label(self.peak_frame, text="物質名/結晶面").grid(row=0, column=2); tk.Label(self.peak_frame, text="2θ").grid(row=0, column=3); tk.Label(self.peak_frame, text="色").grid(row=0, column=4); tk.Label(self.peak_frame, text="線種").grid(row=0, column=5)
         linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-. "}
@@ -200,17 +201,20 @@ class XRDPlotter(tk.Frame):
             elif isinstance(widget, tk.Entry): var.trace_add("write", self.schedule_update)
         create_row(appearance_frame, "X軸ラベル:", self.xlabel_var, 0); create_row(appearance_frame, "Y軸ラベル:", self.ylabel_var, 1)
         create_row(appearance_frame, "軸ラベルフォントサイズ:", self.axis_label_fontsize_var, 2, ttk.Spinbox, from_=1, to=100); create_row(appearance_frame, "目盛りフォントサイズ:", self.tick_label_fontsize_var, 3, ttk.Spinbox, from_=1, to=100)
-        create_row(appearance_frame, "凡例フォントサイズ:", self.legend_fontsize_var, 4, ttk.Spinbox, from_=1, to=100); 
-        create_row(appearance_frame, "データ線の太さ:", self.plot_linewidth_var, 5, ttk.Spinbox, from_=0.1, to=10, increment=0.1)
-        create_row(appearance_frame, "X軸主目盛り間隔:", self.xaxis_major_tick_spacing_var, 6, ttk.Spinbox, from_=1, to=100)
-        tk.Label(appearance_frame, text="X軸目盛りの向き:").grid(row=7, column=0, sticky="w", pady=2)
-        dir_combo = ttk.Combobox(appearance_frame, textvariable=self.tick_direction_var, values=['in', 'out', 'inout'], state="readonly"); dir_combo.grid(row=7, column=1, sticky="ew", padx=5, pady=2); dir_combo.bind("<<ComboboxSelected>>", self.schedule_update)
-        create_row(appearance_frame, "Y軸上部パディング係数:", self.ytop_padding_factor_var, 8, ttk.Spinbox, from_=1, to=20, increment=0.1)
-        tk.Checkbutton(appearance_frame, text="グリッドを表示", variable=self.show_grid_var, command=self.schedule_update).grid(row=9, column=0, columnspan=2, sticky="w", pady=2)
-        tk.Checkbutton(appearance_frame, text="X軸主目盛りラベルを非表示", variable=self.hide_major_xtick_labels_var, command=self.schedule_update).grid(row=10, column=0, columnspan=2, sticky="w", pady=2)
-        tk.Checkbutton(appearance_frame, text="X軸補助目盛りを表示", variable=self.show_minor_xticks_var, command=self._toggle_minor_xticks_widgets).grid(row=11, column=0, columnspan=2, sticky="w", pady=2)
-        self.xminor_tick_spacing_label = tk.Label(appearance_frame, text="X軸補助目盛り間隔:"); self.xminor_tick_spacing_label.grid(row=12, column=0, sticky="w", padx=5, pady=2)
-        self.xminor_tick_spacing_entry = ttk.Spinbox(appearance_frame, textvariable=self.xminor_tick_spacing_var, from_=0.1, to=10, increment=0.1, command=self.schedule_update); self.xminor_tick_spacing_entry.grid(row=12, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(appearance_frame, text="フォント:").grid(row=4, column=0, sticky="w", pady=2)
+        font_combo = ttk.Combobox(appearance_frame, textvariable=self.font_family_var, values=['sans-serif', 'serif', 'Arial', 'Times New Roman', 'Helvetica', 'Courier New'], state="readonly"); font_combo.grid(row=4, column=1, sticky="ew", padx=5, pady=2); font_combo.bind("<<ComboboxSelected>>", self.schedule_update)
+        create_row(appearance_frame, "凡例フォントサイズ:", self.legend_fontsize_var, 5, ttk.Spinbox, from_=1, to=100); 
+        create_row(appearance_frame, "データ線の太さ:", self.plot_linewidth_var, 6, ttk.Spinbox, from_=0.1, to=10, increment=0.1)
+        create_row(appearance_frame, "X軸主目盛り間隔:", self.xaxis_major_tick_spacing_var, 7, ttk.Spinbox, from_=1, to=100)
+        tk.Label(appearance_frame, text="X軸目盛りの向き:").grid(row=8, column=0, sticky="w", pady=2)
+        dir_combo = ttk.Combobox(appearance_frame, textvariable=self.tick_direction_var, values=['in', 'out', 'inout'], state="readonly"); dir_combo.grid(row=8, column=1, sticky="ew", padx=5, pady=2); dir_combo.bind("<<ComboboxSelected>>", self.schedule_update)
+        create_row(appearance_frame, "Y軸上部パディング係数:", self.ytop_padding_factor_var, 9, ttk.Spinbox, from_=1, to=20, increment=0.1)
+        tk.Checkbutton(appearance_frame, text="グリッドを表示", variable=self.show_grid_var, command=self.schedule_update).grid(row=10, column=0, columnspan=2, sticky="w", pady=2)
+        tk.Checkbutton(appearance_frame, text="X軸主目盛りラベルを非表示", variable=self.hide_major_xtick_labels_var, command=self.schedule_update).grid(row=11, column=0, columnspan=2, sticky="w", pady=2)
+        tk.Checkbutton(appearance_frame, text="X軸補助目盛りを表示", variable=self.show_minor_xticks_var, command=self._toggle_minor_xticks_widgets).grid(row=12, column=0, columnspan=2, sticky="w", pady=2)
+        self.xminor_tick_spacing_label = tk.Label(appearance_frame, text="X軸補助目盛り間隔:"); self.xminor_tick_spacing_label.grid(row=13, column=0, sticky="w", padx=5, pady=2)
+        self.xminor_tick_spacing_entry = ttk.Spinbox(appearance_frame, textvariable=self.xminor_tick_spacing_var, from_=0.1, to=10, increment=0.1, command=self.schedule_update); self.xminor_tick_spacing_entry.grid(row=13, column=1, sticky="ew", padx=5, pady=2)
+        tk.Checkbutton(appearance_frame, text="数式フォントを本文に合わせる", variable=self.match_math_font_var, command=self.schedule_update).grid(row=14, column=0, columnspan=2, sticky="w", pady=2)
 
     def build_analysis_tab(self, tab):
         analysis_frame = tk.Frame(tab, padx=10, pady=10); analysis_frame.pack(fill="x", anchor="n")
@@ -330,7 +334,7 @@ class XRDPlotter(tk.Frame):
             # Just fail silently, the plot will update when input is valid.
             return None
             
-        reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_name_vars[i].get().strip() and self.peak_angle_vars[i].get().strip()]
+        reference_peaks = [{'name': self.peak_name_vars[i].get().strip(), 'angle': float(self.peak_angle_vars[i].get().strip()), 'visible': self.peak_visible_vars[i].get(), 'color': self.peak_color_vars[i].get(), 'linestyle': self.peak_style_vars[i].get()} for i in range(10) if self.peak_angle_vars[i].get().strip()]
         
         appearance_settings = {
             'xlabel': self.xlabel_var.get(), 'ylabel': self.ylabel_var.get(), 'axis_label_fontsize': self.axis_label_fontsize_var.get(), 'tick_label_fontsize': self.tick_label_fontsize_var.get(),
@@ -338,8 +342,9 @@ class XRDPlotter(tk.Frame):
             'xaxis_major_tick_spacing': self.xaxis_major_tick_spacing_var.get(), 'show_grid': self.show_grid_var.get(), 'ytop_padding_factor': self.ytop_padding_factor_var.get(),
             'hide_major_xtick_labels': self.hide_major_xtick_labels_var.get(), 'show_minor_xticks': self.show_minor_xticks_var.get(), 'xminor_tick_spacing': self.xminor_tick_spacing_var.get(),
             'peak_label_fontsize': self.peak_label_fontsize_var.get(), 'peak_label_offset': self.peak_label_offset_var.get(),
-            'legend_loc': self.legend_loc_var.get(),
-            'legend_frame': self.legend_frame_var.get(), 'legend_bgcolor': self.legend_bgcolor_var.get()
+            'peak_label_y': self.peak_label_y_var.get(), 'match_math_font': self.match_math_font_var.get(), 'legend_loc': self.legend_loc_var.get(),
+            'legend_frame': self.legend_frame_var.get(), 'legend_bgcolor': self.legend_bgcolor_var.get(), 'legend_italic': self.legend_italic_var.get(),
+            'yscale': self.yscale_var.get(), 'font_family': self.font_family_var.get()
         }
 
         peak_detection_settings = {
@@ -370,11 +375,15 @@ class XRDPlotter(tk.Frame):
             self.canvas.draw()
             return
 
-        self.ax.clear()
-        error_message = data_analyzer.draw_plot(ax=self.ax, **settings)
-        if error_message: messagebox.showinfo("情報", error_message)
-        self.fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
-        self.canvas.draw()
+        match_math_font = settings['appearance'].get('match_math_font', False)
+        rc_params = {'mathtext.default': 'regular'} if match_math_font else {}
+        
+        with plt.rc_context(rc_params):
+            self.ax.clear()
+            error_message = data_analyzer.draw_plot(ax=self.ax, **settings)
+            if error_message: messagebox.showinfo("情報", error_message)
+            self.fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
+            self.canvas.draw()
         
     def select_files(self):
         filepaths = filedialog.askopenfilenames(title="XRDファイルを選択", filetypes=[("RAS files", "*.ras"), ("All files", "*.*")])
@@ -448,12 +457,16 @@ class XRDPlotter(tk.Frame):
         fig = Figure(figsize=(width, height), dpi=preview_dpi)
         ax = fig.add_subplot(111)
 
-        data_analyzer.draw_plot(ax=ax, **settings)
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
+        match_math_font = settings['appearance'].get('match_math_font', False)
+        rc_params = {'mathtext.default': 'regular'} if match_math_font else {}
         
-        canvas = FigureCanvasTkAgg(fig, master=preview_window)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        with plt.rc_context(rc_params):
+            data_analyzer.draw_plot(ax=ax, **settings)
+            fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
+            
+            canvas = FigureCanvasTkAgg(fig, master=preview_window)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         toolbar = NavigationToolbar2Tk(canvas, preview_window)
         toolbar.update()
@@ -494,16 +507,21 @@ class XRDPlotter(tk.Frame):
         save_dpi = 300
         fig = Figure(figsize=(width, height), dpi=save_dpi)
         ax = fig.add_subplot(111)
-        data_analyzer.draw_plot(ax=ax, **settings)
-        # Adjust subplot parameters for the new figure
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
+        
+        match_math_font = settings['appearance'].get('match_math_font', False)
+        rc_params = {'mathtext.default': 'regular'} if match_math_font else {}
+        
+        with plt.rc_context(rc_params):
+            data_analyzer.draw_plot(ax=ax, **settings)
+            # Adjust subplot parameters for the new figure
+            fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
 
-        try:
-            # Use bbox_inches='tight' to ensure labels are not cut off
-            fig.savefig(filepath, dpi=save_dpi, bbox_inches='tight', transparent=True)
-            messagebox.showinfo("成功", f"グラフを保存しました:\n{filepath}", parent=self.master)
-        except Exception as e:
-            messagebox.showerror("エラー", f"ファイルの保存中にエラーが発生しました:\n{e}", parent=self.master)
+            try:
+                # Use bbox_inches='tight' to ensure labels are not cut off
+                fig.savefig(filepath, dpi=save_dpi, bbox_inches='tight', transparent=True)
+                messagebox.showinfo("成功", f"グラフを保存しました:\n{filepath}", parent=self.master)
+            except Exception as e:
+                messagebox.showerror("エラー", f"ファイルの保存中にエラーが発生しました:\n{e}", parent=self.master)
 
     def on_file_select(self, event):
         selected_indices = self.file_listbox.curselection()
