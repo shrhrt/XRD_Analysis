@@ -9,14 +9,14 @@ from scipy.signal import find_peaks
 # parse_ras_file は draw_plot から切り離され、呼び出し元で処理される
 def parse_ras_file(filepath: str) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
     """
-    Rigaku RAS形式のファイルを読み込み、角度と強度のデータを抽出します。
+    Rigaku RAS形式のファイルを読み込み、角度と強度のデータを抽出。
 
     Args:
         filepath (str): 読み込む.rasファイルのパス
 
     Returns:
         Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-            (角度のNumpy配列, 強度のNumpy配列)。読み込みに失敗した場合は (None, None) を返します。
+            (角度のNumpy配列, 強度のNumpy配列)。読み込みに失敗した場合は (None, None) を返す。
     """
     angles, intensities = [], []
     data_started = False
@@ -57,7 +57,7 @@ def _find_and_draw_peaks(
     settings: Dict[str, Any],
 ):
     """
-    データからピークを検出し、プロット上にテキストとして表示します。
+    データからピークを検出し、プロット上にテキストとして表示。
 
     Args:
         ax (plt.Axes): 描画先のMatplotlib Axesオブジェクト
@@ -102,7 +102,7 @@ def _draw_reference_peaks(
     appearance: Dict[str, Any],
 ):
     """
-    参照ピーク（既知の物質の回折角度）を垂直線としてグラフ上に描画します。
+    参照ピーク（既知の物質の回折角度）を垂直線としてグラフ上に描画。
 
     Args:
         ax (plt.Axes): 描画先のMatplotlib Axesオブジェクト
