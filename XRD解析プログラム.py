@@ -9,17 +9,15 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import data_analyzer
-import json
+from config_manager import ConfigManager
 
 
 class XRDPlotter(tk.Frame):
     PREDEFINED_PEAKS_DB = {
         "Fe3O4": [
             {"name": "(220)", "angle": "30.1"},
-            {"name": "(311)", "angle": "35.5"},
             {"name": "(400)", "angle": "43.1"},
             {"name": "(422)", "angle": "53.4"},
-            {"name": "(511)", "angle": "57.0"},
             {"name": "(440)", "angle": "62.6"},
         ],
     }
@@ -1410,6 +1408,102 @@ class XRDPlotter(tk.Frame):
             self.bell()
             return False
 
+    def _build_config_dict(self, include_recent=False) -> dict:
+        """現在のUIの入力状態から設定辞書を構築します。"""
+        settings = {
+            "files": {
+                "filepaths": list(self.file_listbox.get(0, tk.END)),
+                "file_data": self.file_data,
+            },
+            "variables": {
+                var_name: getattr(self, var_name).get()
+                for var_name in self._savable_vars
+            },
+            "reference_peaks": [
+                {
+                    "name": self.peak_name_vars[i].get(),
+                    "angle": self.peak_angle_vars[i].get(),
+                    "visible": self.peak_visible_vars[i].get(),
+                    "color": self.peak_color_vars[i].get(),
+                    "style": self.peak_style_vars[i].get(),
+                }
+                for i in range(len(self.peak_name_vars))
+            ],
+        }
+        if include_recent:
+            settings["recent_files"] = self.recent_files
+        return settings
+
+    def _apply_config_dict(self, settings: dict, is_app_config: bool = False):
+        """設定辞書を読み込み、UIに反映させます。"""
+        if is_app_config and "recent_files" in settings:
+            self.recent_files = settings["recent_files"]
+            self.update_recent_menu()
+
+        if not is_app_config:
+            self.file_listbox.delete(0, tk.END)
+            self.file_data.clear()
+            self.parsed_data.clear()
+            self.legend_name_entry.config(state="disabled")
+            self.legend_name_var.set("")
+
+        loaded_filepaths = settings.get("files", {}).get("filepaths", [])
+        loaded_file_data = settings.get("files", {}).get("file_data", {})
+
+        for fp in loaded_filepaths:
+            if os.path.exists(fp):
+                angles, intensities = data_analyzer.parse_ras_file(fp)
+                if angles is not None and intensities is not None:
+                    self.parsed_data[fp] = (angles, intensities)
+                    self.file_data[fp] = loaded_file_data.get(fp, os.path.basename(fp))
+                    self.file_listbox.insert(tk.END, fp)
+                elif not is_app_config:
+                    messagebox.showwarning(
+                        "警告",
+                        f"ファイル {os.path.basename(fp)} の読み込みに失敗しました。スキップします。",
+                        parent=self.master,
+                    )
+            elif not is_app_config:
+                messagebox.showwarning(
+                    "警告",
+                    f"ファイルが見つかりません: {fp}\nこのファイルはスキップされました。",
+                    parent=self.master,
+                )
+
+        if self.file_listbox.size() > 0:
+            self.file_listbox.selection_set(0)
+            self.on_file_select(None)
+
+        if "variables" in settings:
+            for var_name, value in settings["variables"].items():
+                if hasattr(self, var_name):
+                    try:
+                        getattr(self, var_name).set(value)
+                    except Exception:
+                        pass
+        elif "export_format" in settings:  # Backward compatibility
+            if "export_format" in settings:
+                self.export_format_var.set(settings["export_format"])
+            if "export_width" in settings:
+                self.export_width_var.set(settings["export_width"])
+            if "export_height" in settings:
+                self.export_height_var.set(settings["export_height"])
+
+        if "reference_peaks" in settings:
+            for i, peak_data in enumerate(settings["reference_peaks"]):
+                if i < len(self.peak_name_vars):
+                    self.peak_name_vars[i].set(peak_data.get("name", ""))
+                    self.peak_angle_vars[i].set(peak_data.get("angle", ""))
+                    self.peak_visible_vars[i].set(peak_data.get("visible", False))
+                    color = peak_data.get("color", "#000000")
+                    self.peak_color_vars[i].set(color)
+                    self.peak_color_buttons[i].config(fg=color)
+                    self.peak_style_vars[i].set(peak_data.get("style", "--"))
+
+        self._toggle_spacing_widget()
+        self._toggle_minor_xticks_widgets()
+        self.schedule_update()
+
     def save_settings(self):
         """Saves current plot settings to a JSON file."""
         default_filename = ""
@@ -1428,38 +1522,14 @@ class XRDPlotter(tk.Frame):
         if not filepath:
             return
 
-        settings = {
-            "files": {
-                "filepaths": self.file_listbox.get(0, tk.END),
-                "file_data": self.file_data,
-            },
-            "variables": {
-                var_name: getattr(self, var_name).get()
-                for var_name in self._savable_vars
-            },
-            "reference_peaks": [
-                {
-                    "name": self.peak_name_vars[i].get(),
-                    "angle": self.peak_angle_vars[i].get(),
-                    "visible": self.peak_visible_vars[i].get(),
-                    "color": self.peak_color_vars[i].get(),
-                    "style": self.peak_style_vars[i].get(),
-                }
-                for i in range(len(self.peak_name_vars))
-            ],
-        }
-
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(settings, f, indent=4, ensure_ascii=False)
+        settings = self._build_config_dict()
+        if ConfigManager.save_to_file(filepath, settings):
             messagebox.showinfo(
                 "成功", f"設定を保存しました:\n{filepath}", parent=self.master
             )
-        except Exception as e:
+        else:
             messagebox.showerror(
-                "エラー",
-                f"設定の保存中にエラーが発生しました:\n{e}",
-                parent=self.master,
+                "エラー", "設定の保存中にエラーが発生しました", parent=self.master
             )
 
     def load_settings(self):
@@ -1472,176 +1542,24 @@ class XRDPlotter(tk.Frame):
         if not filepath:
             return
 
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                settings = json.load(f)
-        except Exception as e:
+        settings = ConfigManager.load_from_file(filepath)
+        if settings is None:
             messagebox.showerror(
-                "エラー",
-                f"設定の読み込み中にエラーが発生しました:\n{e}",
-                parent=self.master,
+                "エラー", "設定の読み込みに失敗しました", parent=self.master
             )
             return
 
-        # 1. Clear current state
-        self.file_listbox.delete(0, tk.END)
-        self.file_data.clear()
-        self.parsed_data.clear()
-        self.legend_name_entry.config(state="disabled")
-        self.legend_name_var.set("")
-
-        # 2. Load files and parse data
-        loaded_filepaths = settings.get("files", {}).get("filepaths", [])
-        loaded_file_data = settings.get("files", {}).get("file_data", {})
-
-        for fp in loaded_filepaths:
-            if os.path.exists(fp):
-                angles, intensities = data_analyzer.parse_ras_file(fp)
-                if angles is None or intensities is None:
-                    messagebox.showwarning(
-                        "警告",
-                        f"ファイル {os.path.basename(fp)} の読み込みに失敗しました。スキップします。",
-                        parent=self.master,
-                    )
-                    continue
-                self.parsed_data[fp] = (angles, intensities)
-                # Use legend name from saved settings, fall back to basename
-                self.file_data[fp] = loaded_file_data.get(fp, os.path.basename(fp))
-                self.file_listbox.insert(tk.END, fp)
-            else:
-                messagebox.showwarning(
-                    "警告",
-                    f"ファイルが見つかりません: {fp}\nこのファイルはスキップされました。",
-                    parent=self.master,
-                )
-
-        if self.file_listbox.size() > 0:
-            self.file_listbox.selection_set(0)
-            self.on_file_select(None)
-
-        # 3. Load simple variables
-        if "variables" in settings:
-            for var_name, value in settings["variables"].items():
-                if hasattr(self, var_name):
-                    try:
-                        getattr(self, var_name).set(value)
-                    except Exception as e:
-                        print(
-                            f"Warning: Could not set variable '{var_name}' to '{value}'. Error: {e}"
-                        )
-
-        # 4. Load reference peaks
-        if "reference_peaks" in settings:
-            linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-. "}
-            reverse_linestyle_map = {v.strip(): k for k, v in linestyle_map.items()}
-
-            for i, peak_data in enumerate(settings["reference_peaks"]):
-                if i < len(self.peak_name_vars):
-                    self.peak_name_vars[i].set(peak_data.get("name", ""))
-                    self.peak_angle_vars[i].set(peak_data.get("angle", ""))
-                    self.peak_visible_vars[i].set(peak_data.get("visible", False))
-                    color = peak_data.get("color", "#000000")
-                    self.peak_color_vars[i].set(color)
-                    self.peak_color_buttons[i].config(fg=color)
-
-                    style_value = peak_data.get("style", "--")
-                    self.peak_style_vars[i].set(style_value)
-                    # This part is tricky as the combobox is not stored. We'll set the variable,
-                    # but the displayed text in the combobox might not update. The plot will be correct.
-
-        # 5. Refresh UI and plot
-        self._toggle_spacing_widget()
-        self._toggle_minor_xticks_widgets()
-        self.schedule_update()
+        self._apply_config_dict(settings, is_app_config=False)
         messagebox.showinfo("成功", "設定を読み込みました。", parent=self.master)
 
     def load_app_config(self):
-        if not os.path.exists(self.config_file):
-            return
-        try:
-            with open(self.config_file, "r", encoding="utf-8") as f:
-                settings = json.load(f)
-        except Exception:
-            return
-
-        if "recent_files" in settings:
-            self.recent_files = settings["recent_files"]
-            self.update_recent_menu()
-
-        # Files
-        loaded_filepaths = settings.get("files", {}).get("filepaths", [])
-        loaded_file_data = settings.get("files", {}).get("file_data", {})
-        for fp in loaded_filepaths:
-            if os.path.exists(fp):
-                angles, intensities = data_analyzer.parse_ras_file(fp)
-                if angles is not None and intensities is not None:
-                    self.parsed_data[fp] = (angles, intensities)
-                    self.file_data[fp] = loaded_file_data.get(fp, os.path.basename(fp))
-                    self.file_listbox.insert(tk.END, fp)
-        if self.file_listbox.size() > 0:
-            self.file_listbox.selection_set(0)
-            self.on_file_select(None)
-
-        # Variables
-        if "variables" in settings:
-            for var_name, value in settings["variables"].items():
-                if hasattr(self, var_name):
-                    try:
-                        getattr(self, var_name).set(value)
-                    except Exception:
-                        pass
-        elif "export_format" in settings:  # Backward compatibility
-            if "export_format" in settings:
-                self.export_format_var.set(settings["export_format"])
-            if "export_width" in settings:
-                self.export_width_var.set(settings["export_width"])
-            if "export_height" in settings:
-                self.export_height_var.set(settings["export_height"])
-
-        # Reference Peaks
-        if "reference_peaks" in settings:
-            for i, peak_data in enumerate(settings["reference_peaks"]):
-                if i < len(self.peak_name_vars):
-                    self.peak_name_vars[i].set(peak_data.get("name", ""))
-                    self.peak_angle_vars[i].set(peak_data.get("angle", ""))
-                    self.peak_visible_vars[i].set(peak_data.get("visible", False))
-                    self.peak_color_vars[i].set(peak_data.get("color", "#000000"))
-                    self.peak_color_buttons[i].config(
-                        fg=peak_data.get("color", "#000000")
-                    )
-                    self.peak_style_vars[i].set(peak_data.get("style", "--"))
-
-        self._toggle_spacing_widget()
-        self._toggle_minor_xticks_widgets()
-        self.schedule_update()
+        settings = ConfigManager.load_from_file(self.config_file)
+        if settings:
+            self._apply_config_dict(settings, is_app_config=True)
 
     def save_app_config(self):
-        settings = {
-            "recent_files": self.recent_files,
-            "files": {
-                "filepaths": self.file_listbox.get(0, tk.END),
-                "file_data": self.file_data,
-            },
-            "variables": {
-                var_name: getattr(self, var_name).get()
-                for var_name in self._savable_vars
-            },
-            "reference_peaks": [
-                {
-                    "name": self.peak_name_vars[i].get(),
-                    "angle": self.peak_angle_vars[i].get(),
-                    "visible": self.peak_visible_vars[i].get(),
-                    "color": self.peak_color_vars[i].get(),
-                    "style": self.peak_style_vars[i].get(),
-                }
-                for i in range(len(self.peak_name_vars))
-            ],
-        }
-        try:
-            with open(self.config_file, "w", encoding="utf-8") as f:
-                json.dump(settings, f, indent=4, ensure_ascii=False)
-        except Exception:
-            pass
+        settings = self._build_config_dict(include_recent=True)
+        ConfigManager.save_to_file(self.config_file, settings)
 
     def on_closing(self):
         self.save_app_config()
