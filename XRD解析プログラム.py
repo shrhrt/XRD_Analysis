@@ -11,6 +11,8 @@ from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import data_analyzer
 from config_manager import ConfigManager
 from ui.tab_analysis import AnalysisTab
+from ui.tab_appearance import AppearanceTab
+from ui.tab_export import ExportTab
 
 
 class XRDPlotter(tk.Frame):
@@ -227,9 +229,9 @@ class XRDPlotter(tk.Frame):
 
         self.build_plot_settings_tab(plot_settings_tab)
         self.build_reference_peaks_tab(reference_peaks_tab)
-        self.build_appearance_tab(appearance_tab)
+        AppearanceTab(appearance_tab, self)
         AnalysisTab(analysis_tab, self)
-        self.build_export_tab(export_tab)
+        ExportTab(export_tab, self)
 
         plot_panel = tk.Frame(main_pane)
         main_pane.add(plot_panel, stretch="always")
@@ -578,195 +580,6 @@ class XRDPlotter(tk.Frame):
                 command=lambda i=i: self.clear_peak_row(i),
                 width=2,
             ).grid(row=i + 1, column=6, padx=(2, 5))
-
-    def build_appearance_tab(self, tab):
-        appearance_frame = tk.Frame(tab, padx=10, pady=10)
-        appearance_frame.pack(fill="x")
-        appearance_frame.columnconfigure(1, weight=1)
-
-        def create_row(
-            parent, label_text, var, row, widget_class=tk.Entry, **widget_args
-        ):
-            tk.Label(parent, text=label_text).grid(
-                row=row, column=0, sticky="w", pady=2
-            )
-            widget = widget_class(parent, textvariable=var, **widget_args)
-            widget.grid(row=row, column=1, sticky="ew", padx=5, pady=2)
-            if isinstance(widget, (ttk.Spinbox, tk.Scale)):
-                widget.configure(command=lambda *args: self.schedule_update())
-            elif isinstance(widget, tk.Entry):
-                var.trace_add("write", self.schedule_update)
-
-        create_row(appearance_frame, "X軸ラベル:", self.xlabel_var, 0)
-        create_row(appearance_frame, "Y軸ラベル:", self.ylabel_var, 1)
-        create_row(
-            appearance_frame,
-            "軸ラベルフォントサイズ:",
-            self.axis_label_fontsize_var,
-            2,
-            ttk.Spinbox,
-            from_=1,
-            to=100,
-        )
-        create_row(
-            appearance_frame,
-            "目盛りフォントサイズ:",
-            self.tick_label_fontsize_var,
-            3,
-            ttk.Spinbox,
-            from_=1,
-            to=100,
-        )
-        tk.Label(appearance_frame, text="フォント:").grid(
-            row=4, column=0, sticky="w", pady=2
-        )
-        font_combo = ttk.Combobox(
-            appearance_frame,
-            textvariable=self.font_family_var,
-            values=[
-                "sans-serif",
-                "serif",
-                "Arial",
-                "Times New Roman",
-                "Helvetica",
-                "Courier New",
-            ],
-            state="readonly",
-        )
-        font_combo.grid(row=4, column=1, sticky="ew", padx=5, pady=2)
-        font_combo.bind("<<ComboboxSelected>>", self.schedule_update)
-        create_row(
-            appearance_frame,
-            "凡例フォントサイズ:",
-            self.legend_fontsize_var,
-            5,
-            ttk.Spinbox,
-            from_=1,
-            to=100,
-        )
-        create_row(
-            appearance_frame,
-            "データ線の太さ:",
-            self.plot_linewidth_var,
-            6,
-            ttk.Spinbox,
-            from_=0.1,
-            to=10,
-            increment=0.1,
-        )
-        create_row(
-            appearance_frame,
-            "X軸主目盛り間隔:",
-            self.xaxis_major_tick_spacing_var,
-            7,
-            ttk.Spinbox,
-            from_=1,
-            to=100,
-        )
-        tk.Label(appearance_frame, text="X軸目盛りの向き:").grid(
-            row=8, column=0, sticky="w", pady=2
-        )
-        dir_combo = ttk.Combobox(
-            appearance_frame,
-            textvariable=self.tick_direction_var,
-            values=["in", "out", "inout"],
-            state="readonly",
-        )
-        dir_combo.grid(row=8, column=1, sticky="ew", padx=5, pady=2)
-        dir_combo.bind("<<ComboboxSelected>>", self.schedule_update)
-        create_row(
-            appearance_frame,
-            "Y軸上部パディング係数:",
-            self.ytop_padding_factor_var,
-            9,
-            ttk.Spinbox,
-            from_=1,
-            to=20,
-            increment=0.1,
-        )
-        tk.Checkbutton(
-            appearance_frame,
-            text="グリッドを表示",
-            variable=self.show_grid_var,
-            command=self.schedule_update,
-        ).grid(row=10, column=0, columnspan=2, sticky="w", pady=2)
-        tk.Checkbutton(
-            appearance_frame,
-            text="X軸主目盛りラベルを非表示",
-            variable=self.hide_major_xtick_labels_var,
-            command=self.schedule_update,
-        ).grid(row=11, column=0, columnspan=2, sticky="w", pady=2)
-        tk.Checkbutton(
-            appearance_frame,
-            text="X軸補助目盛りを表示",
-            variable=self.show_minor_xticks_var,
-            command=self._toggle_minor_xticks_widgets,
-        ).grid(row=12, column=0, columnspan=2, sticky="w", pady=2)
-        self.xminor_tick_spacing_label = tk.Label(
-            appearance_frame, text="X軸補助目盛り間隔:"
-        )
-        self.xminor_tick_spacing_label.grid(
-            row=13, column=0, sticky="w", padx=5, pady=2
-        )
-        self.xminor_tick_spacing_entry = ttk.Spinbox(
-            appearance_frame,
-            textvariable=self.xminor_tick_spacing_var,
-            from_=0.1,
-            to=10,
-            increment=0.1,
-            command=self.schedule_update,
-        )
-        self.xminor_tick_spacing_entry.grid(
-            row=13, column=1, sticky="ew", padx=5, pady=2
-        )
-        tk.Checkbutton(
-            appearance_frame,
-            text="数式フォントを本文に合わせる",
-            variable=self.match_math_font_var,
-            command=self.schedule_update,
-        ).grid(row=14, column=0, columnspan=2, sticky="w", pady=2)
-
-    def build_export_tab(self, tab):
-        export_frame = tk.LabelFrame(tab, text="画像ファイルとして保存")
-        export_frame.pack(fill="x", padx=10, pady=10)
-        export_frame.columnconfigure(1, weight=1)
-        tk.Label(export_frame, text="幅 (inch):").grid(
-            row=0, column=0, sticky="w", padx=5, pady=2
-        )
-        tk.Entry(export_frame, textvariable=self.export_width_var).grid(
-            row=0, column=1, sticky="ew", padx=5, pady=2
-        )
-        tk.Label(export_frame, text="高さ (inch):").grid(
-            row=1, column=0, sticky="w", padx=5, pady=2
-        )
-        tk.Entry(export_frame, textvariable=self.export_height_var).grid(
-            row=1, column=1, sticky="ew", padx=5, pady=2
-        )
-        tk.Label(export_frame, text="形式:").grid(
-            row=2, column=0, sticky="w", padx=5, pady=2
-        )
-        ttk.Combobox(
-            export_frame,
-            textvariable=self.export_format_var,
-            values=["png", "pdf", "svg"],
-            state="readonly",
-        ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
-
-        button_frame = tk.Frame(export_frame)
-        button_frame.grid(
-            row=3, column=0, columnspan=2, sticky="ew", padx=5, pady=(10, 5)
-        )
-        button_frame.columnconfigure(0, weight=1)
-        button_frame.columnconfigure(1, weight=1)
-        tk.Button(button_frame, text="プレビュー", command=self.preview_figure).grid(
-            row=0, column=0, sticky="ew", padx=(0, 2)
-        )
-        tk.Button(
-            button_frame,
-            text="グラフを保存",
-            command=self.save_figure,
-            font=("", 10, "bold"),
-        ).grid(row=0, column=1, sticky="ew", padx=(2, 0))
 
     def _toggle_spacing_widget(self, *args):
         if self.stack_plots_var.get():

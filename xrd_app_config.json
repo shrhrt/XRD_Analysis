@@ -1,15 +1,7 @@
 {
     "files": {
-        "filepaths": [
-            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119re_Fe3O4_MgO_XRD.ras",
-            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251128_Fe3O4_MgO_XRD.ras",
-            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251206_Fe3O4_MgO_XRD.ras"
-        ],
-        "file_data": {
-            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119re_Fe3O4_MgO_XRD.ras": "251119re_Fe3O4_MgO_XRD.ras",
-            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251128_Fe3O4_MgO_XRD.ras": "251128_Fe3O4_MgO_XRD.ras",
-            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251206_Fe3O4_MgO_XRD.ras": "251206_Fe3O4_MgO_XRD.ras"
-        }
+        "filepaths": [],
+        "file_data": {}
     },
     "variables": {
         "xmin_var": "",
