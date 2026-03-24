@@ -18,7 +18,7 @@ from ui.tab_appearance import AppearanceTab
 from ui.tab_export import ExportTab
 
 
-class XRDPlotter(tk.Frame):
+class XRDPlotter(ttk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
@@ -169,6 +169,14 @@ class XRDPlotter(tk.Frame):
         self.create_widgets()
         self.load_app_config()
 
+    def toggle_theme(self):
+        if sv_ttk.get_theme() == "dark":
+            sv_ttk.set_theme("light")
+            self.theme_button.config(text="ダークモードに切り替え")
+        else:
+            sv_ttk.set_theme("dark")
+            self.theme_button.config(text="ライトモードに切り替え")
+
     def create_menu(self):
         self.menubar = tk.Menu(self.master)
         self.master.config(menu=self.menubar)
@@ -190,12 +198,19 @@ class XRDPlotter(tk.Frame):
         file_menu.add_command(label="終了", command=self.on_closing)
 
     def create_widgets(self):
+        top_frame = ttk.Frame(self)
+        top_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
+        self.theme_button = ttk.Button(
+            top_frame, text="ダークモードに切り替え", command=self.toggle_theme
+        )
+        self.theme_button.pack(side=tk.RIGHT)
+
         main_pane = tk.PanedWindow(
             self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=5
         )
         main_pane.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
-        left_panel = tk.Frame(main_pane, width=480)
+        left_panel = ttk.Frame(main_pane, width=480)
         main_pane.add(left_panel, stretch="never")
         left_panel.rowconfigure(0, weight=1)
         left_panel.columnconfigure(0, weight=1)
@@ -209,11 +224,11 @@ class XRDPlotter(tk.Frame):
             analysis_tab,
             export_tab,
         ) = (
-            tk.Frame(notebook),
-            tk.Frame(notebook),
-            tk.Frame(notebook),
-            tk.Frame(notebook),
-            tk.Frame(notebook),
+            ttk.Frame(notebook),
+            ttk.Frame(notebook),
+            ttk.Frame(notebook),
+            ttk.Frame(notebook),
+            ttk.Frame(notebook),
         )
         notebook.add(plot_settings_tab, text="プロット設定")
         notebook.add(reference_peaks_tab, text="参照ピーク")
@@ -227,7 +242,7 @@ class XRDPlotter(tk.Frame):
         AnalysisTab(analysis_tab, self)
         ExportTab(export_tab, self)
 
-        plot_panel = tk.Frame(main_pane)
+        plot_panel = ttk.Frame(main_pane)
         main_pane.add(plot_panel, stretch="always")
         self.canvas = FigureCanvasTkAgg(self.fig, master=plot_panel)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -257,10 +272,10 @@ class XRDPlotter(tk.Frame):
         self.schedule_update()
 
     def _get_current_plot_settings(self):
-        # Reset background colors on each attempt
-        self.xmin_entry.config(bg="white")
-        self.xmax_entry.config(bg="white")
-        self.threshold_entry.config(bg="white")  # Also reset threshold entry
+        # エラー状態(invalid)をリセット
+        self.xmin_entry.state(["!invalid"])
+        self.xmax_entry.state(["!invalid"])
+        self.threshold_entry.state(["!invalid"])
 
         filepaths = self.file_listbox.get(0, tk.END)
         plot_data_full = [
@@ -283,8 +298,8 @@ class XRDPlotter(tk.Frame):
 
             # Check for logical error between xmin and xmax
             if xmin is not None and xmax is not None and xmin >= xmax:
-                self.xmin_entry.config(bg="#FFDDDD")  # Light red background
-                self.xmax_entry.config(bg="#FFDDDD")
+                self.xmin_entry.state(["invalid"])  # エラー状態にする
+                self.xmax_entry.state(["invalid"])
                 return None  # Prevent plot update, no messagebox
 
         except ValueError:

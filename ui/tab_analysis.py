@@ -12,78 +12,80 @@ class AnalysisTab:
         self.build()
 
     def build(self):
-        analysis_frame = tk.Frame(self.parent, padx=10, pady=10)
+        analysis_frame = ttk.Frame(self.parent, padding=(10, 10))
         analysis_frame.pack(fill="x", anchor="n")
         analysis_frame.columnconfigure(0, weight=1)
 
         # d-spacing tool
-        d_spacing_frame = tk.LabelFrame(analysis_frame, text="d値計算ツール")
+        d_spacing_frame = ttk.LabelFrame(analysis_frame, text="d値計算ツール")
         d_spacing_frame.grid(row=0, column=0, sticky="ew", pady=5)
         d_spacing_frame.columnconfigure(1, weight=1)
-        tk.Label(d_spacing_frame, text="ブラッグの式: nλ = 2d sin(θ)").grid(
+        ttk.Label(d_spacing_frame, text="ブラッグの式: nλ = 2d sin(θ)").grid(
             row=0, column=0, columnspan=3, sticky="w", padx=5
         )
-        tk.Label(d_spacing_frame, text="定数: X線=Co Kα1 (λ=1.78897 Å), n=1").grid(
+        ttk.Label(d_spacing_frame, text="定数: X線=Co Kα1 (λ=1.78897 Å), n=1").grid(
             row=1, column=0, columnspan=3, sticky="w", padx=5
         )
-        tk.Label(d_spacing_frame, text="2θ (degree):").grid(
+        ttk.Label(d_spacing_frame, text="2θ (degree):").grid(
             row=2, column=0, sticky="w", padx=5, pady=5
         )
 
-        d_input_entry = tk.Entry(
+        d_input_entry = ttk.Entry(
             d_spacing_frame, textvariable=self.app.d_spacing_input_2theta_var
         )
         d_input_entry.grid(row=2, column=1, sticky="ew", padx=5)
-        tk.Button(d_spacing_frame, text="計算", command=self.calculate_d_spacing).grid(
+        ttk.Button(d_spacing_frame, text="計算", command=self.calculate_d_spacing).grid(
             row=2, column=2, padx=5
         )
-        tk.Label(
+        ttk.Label(
             d_spacing_frame, textvariable=self.app.d_spacing_result_var, relief="sunken"
         ).grid(row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=5)
         d_input_entry.bind("<Return>", self.calculate_d_spacing)
 
         # Lattice constant tool
-        lc_frame = tk.LabelFrame(analysis_frame, text="格子定数計算ツール (立方晶のみ)")
+        lc_frame = ttk.LabelFrame(
+            analysis_frame, text="格子定数計算ツール (立方晶のみ)"
+        )
         lc_frame.grid(row=1, column=0, sticky="ew", pady=5)
         lc_frame.columnconfigure(1, weight=1)
-        tk.Label(lc_frame, text="式: a = d * √(h² + k² + l²)").grid(
+        ttk.Label(lc_frame, text="式: a = d * √(h² + k² + l²)").grid(
             row=0, column=0, columnspan=3, sticky="w", padx=5
         )
-        tk.Label(lc_frame, text="d-spacing (Å):").grid(
+        ttk.Label(lc_frame, text="d-spacing (Å):").grid(
             row=1, column=0, sticky="w", padx=5, pady=5
         )
 
-        lc_d_entry = tk.Entry(lc_frame, textvariable=self.app.lc_input_d_var)
+        lc_d_entry = ttk.Entry(lc_frame, textvariable=self.app.lc_input_d_var)
         lc_d_entry.grid(row=1, column=1, sticky="ew", padx=5)
-        tk.Button(lc_frame, text="コピー", command=self.copy_d_spacing).grid(
+        ttk.Button(lc_frame, text="コピー", command=self.copy_d_spacing).grid(
             row=1, column=2, padx=5
         )
 
-        hkl_frame = tk.Frame(lc_frame)
+        hkl_frame = ttk.Frame(lc_frame)
         hkl_frame.grid(row=2, column=0, columnspan=3, sticky="w", padx=5, pady=5)
-        tk.Label(hkl_frame, text="面指数 (h, k, l):").pack(side="left")
-        tk.Entry(hkl_frame, textvariable=self.app.lc_h_var, width=5).pack(side="left")
-        tk.Entry(hkl_frame, textvariable=self.app.lc_k_var, width=5).pack(side="left")
-        tk.Entry(hkl_frame, textvariable=self.app.lc_l_var, width=5).pack(side="left")
+        ttk.Label(hkl_frame, text="面指数 (h, k, l):").pack(side="left")
+        ttk.Entry(hkl_frame, textvariable=self.app.lc_h_var, width=5).pack(side="left")
+        ttk.Entry(hkl_frame, textvariable=self.app.lc_k_var, width=5).pack(side="left")
+        ttk.Entry(hkl_frame, textvariable=self.app.lc_l_var, width=5).pack(side="left")
 
-        tk.Button(lc_frame, text="計算", command=self.calculate_lattice_constant).grid(
+        ttk.Button(lc_frame, text="計算", command=self.calculate_lattice_constant).grid(
             row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=5
         )
-        tk.Label(lc_frame, textvariable=self.app.lc_result_var, relief="sunken").grid(
+        ttk.Label(lc_frame, textvariable=self.app.lc_result_var, relief="sunken").grid(
             row=4, column=0, columnspan=3, sticky="ew", padx=5, pady=5
         )
 
         # Peak detection
-        peak_frame = tk.LabelFrame(analysis_frame, text="ピーク検出")
+        peak_frame = ttk.LabelFrame(analysis_frame, text="ピーク検出")
         peak_frame.grid(row=2, column=0, sticky="ew", pady=5)
         peak_frame.columnconfigure(1, weight=1)
-        tk.Checkbutton(
+        ttk.Checkbutton(
             peak_frame,
             text="有効化",
             variable=self.app.peak_detection_enabled_var,
             command=self.app.schedule_update,
         ).grid(row=0, column=0, columnspan=2, sticky="w", padx=5)
-        tk.Label(peak_frame, text="最小高さ:").grid(
+        ttk.Label(peak_frame, text="最小高さ:").grid(
             row=1, column=0, sticky="w", padx=5, pady=2
         )
         ttk.Spinbox(
@@ -94,7 +96,7 @@ class AnalysisTab:
             increment=10,
             command=self.app.schedule_update,
         ).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(peak_frame, text="最小プロミネンス:").grid(
+        ttk.Label(peak_frame, text="最小プロミネンス:").grid(
             row=2, column=0, sticky="w", padx=5, pady=2
         )
         ttk.Spinbox(
@@ -105,7 +107,7 @@ class AnalysisTab:
             increment=10,
             command=self.app.schedule_update,
         ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
-        tk.Label(peak_frame, text="最小幅:").grid(
+        ttk.Label(peak_frame, text="最小幅:").grid(
             row=3, column=0, sticky="w", padx=5, pady=2
         )
         ttk.Spinbox(

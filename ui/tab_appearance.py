@@ -11,21 +11,21 @@ class AppearanceTab:
         self.build()
 
     def build(self):
-        appearance_frame = tk.Frame(self.parent, padx=10, pady=10)
+        appearance_frame = ttk.Frame(self.parent, padding=(10, 10))
         appearance_frame.pack(fill="x")
         appearance_frame.columnconfigure(1, weight=1)
 
         def create_row(
-            parent, label_text, var, row, widget_class=tk.Entry, **widget_args
+            parent, label_text, var, row, widget_class=ttk.Entry, **widget_args
         ):
-            tk.Label(parent, text=label_text).grid(
+            ttk.Label(parent, text=label_text).grid(
                 row=row, column=0, sticky="w", pady=2
             )
             widget = widget_class(parent, textvariable=var, **widget_args)
             widget.grid(row=row, column=1, sticky="ew", padx=5, pady=2)
             if isinstance(widget, (ttk.Spinbox, tk.Scale)):
                 widget.configure(command=lambda *args: self.app.schedule_update())
-            elif isinstance(widget, tk.Entry):
+            elif isinstance(widget, ttk.Entry):
                 var.trace_add("write", self.app.schedule_update)
 
         create_row(appearance_frame, "X軸ラベル:", self.app.xlabel_var, 0)
@@ -48,7 +48,7 @@ class AppearanceTab:
             from_=1,
             to=100,
         )
-        tk.Label(appearance_frame, text="フォント:").grid(
+        ttk.Label(appearance_frame, text="フォント:").grid(
             row=4, column=0, sticky="w", pady=2
         )
         font_combo = ttk.Combobox(
@@ -94,7 +94,7 @@ class AppearanceTab:
             from_=1,
             to=100,
         )
-        tk.Label(appearance_frame, text="X軸目盛りの向き:").grid(
+        ttk.Label(appearance_frame, text="X軸目盛りの向き:").grid(
             row=8, column=0, sticky="w", pady=2
         )
         dir_combo = ttk.Combobox(
@@ -115,26 +115,26 @@ class AppearanceTab:
             to=20,
             increment=0.1,
         )
-        tk.Checkbutton(
+        ttk.Checkbutton(
             appearance_frame,
             text="グリッドを表示",
             variable=self.app.show_grid_var,
             command=self.app.schedule_update,
         ).grid(row=10, column=0, columnspan=2, sticky="w", pady=2)
-        tk.Checkbutton(
+        ttk.Checkbutton(
             appearance_frame,
             text="X軸主目盛りラベルを非表示",
             variable=self.app.hide_major_xtick_labels_var,
             command=self.app.schedule_update,
         ).grid(row=11, column=0, columnspan=2, sticky="w", pady=2)
-        tk.Checkbutton(
+        ttk.Checkbutton(
             appearance_frame,
             text="X軸補助目盛りを表示",
             variable=self.app.show_minor_xticks_var,
             command=self.app._toggle_minor_xticks_widgets,
         ).grid(row=12, column=0, columnspan=2, sticky="w", pady=2)
 
-        self.app.xminor_tick_spacing_label = tk.Label(
+        self.app.xminor_tick_spacing_label = ttk.Label(
             appearance_frame, text="X軸補助目盛り間隔:"
         )
         self.app.xminor_tick_spacing_label.grid(
@@ -152,7 +152,7 @@ class AppearanceTab:
             row=13, column=1, sticky="ew", padx=5, pady=2
         )
 
-        tk.Checkbutton(
+        ttk.Checkbutton(
             appearance_frame,
             text="数式フォントを本文に合わせる",
             variable=self.app.match_math_font_var,
