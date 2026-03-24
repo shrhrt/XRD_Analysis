@@ -12,8 +12,8 @@
         }
     },
     "variables": {
-        "xmin_var": "",
-        "xmax_var": "",
+        "xmin_var": "40",
+        "xmax_var": "60",
         "threshold_var": "1",
         "show_legend_var": true,
         "stack_plots_var": true,
@@ -38,7 +38,7 @@
         "hide_major_xtick_labels_var": false,
         "show_minor_xticks_var": true,
         "xminor_tick_spacing_var": 1.0,
-        "peak_label_fontsize_var": 15.0,
+        "peak_label_fontsize_var": 16.0,
         "peak_label_offset_var": 0.3,
         "peak_label_y_var": 0.93,
         "match_math_font_var": false,
@@ -57,29 +57,29 @@
     },
     "reference_peaks": [
         {
-            "name": "",
-            "angle": "",
-            "visible": false,
+            "name": "Pt (111)",
+            "angle": "46.5",
+            "visible": true,
             "color": "#000000",
             "style": "--"
         },
         {
-            "name": "",
-            "angle": "50.24",
+            "name": "Pt (200)",
+            "angle": "54.2",
             "visible": true,
             "color": "#8000ff",
             "style": "--"
         },
         {
-            "name": "Pt (002)",
-            "angle": "54.2",
+            "name": "γ-Fe2O3 (400)",
+            "angle": "50.9",
             "visible": true,
             "color": "#0000ff",
             "style": "--"
         },
         {
-            "name": "",
-            "angle": "116.28",
+            "name": "Fe3O4 (400)",
+            "angle": "50.4",
             "visible": true,
             "color": "#000000",
             "style": "--"
@@ -101,7 +101,7 @@
         {
             "name": "γ-Fe2O3 (004)",
             "angle": "50.876",
-            "visible": true,
+            "visible": false,
             "color": "#009300",
             "style": "--"
         },
