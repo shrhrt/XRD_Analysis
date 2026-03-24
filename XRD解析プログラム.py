@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import data_analyzer
 from config_manager import ConfigManager
+import sv_ttk
 from ui.tab_plot import PlotSettingsTab
 from ui.tab_reference import ReferencePeaksTab
 from ui.tab_analysis import AnalysisTab
@@ -858,5 +859,9 @@ class XRDPlotter(tk.Frame):
 
 if __name__ == "__main__":
     root = tk.Tk()
+
+    # sv_ttkテーマを適用 ("light" または "dark" を選択可能)
+    sv_ttk.set_theme("light")
+
     app = XRDPlotter(master=root)
     app.mainloop()
