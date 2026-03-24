@@ -1,10 +1,14 @@
 import os
+import logging
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, NullLocator
 import numpy as np
+import math
 from typing import List, Tuple, Dict, Optional, Any
 from dataclasses import dataclass, field
 from scipy.signal import find_peaks
+
+logger = logging.getLogger(__name__)
 
 
 # parse_ras_file は draw_plot から切り離され、呼び出し元で処理される
@@ -44,10 +48,27 @@ def parse_ras_file(filepath: str) -> Tuple[Optional[np.ndarray], Optional[np.nda
                             # 数値に変換できない行（ヘッダーなど）はスキップ
                             continue
     except OSError as e:
-        print(f"Error reading file {filepath}: {e}")
+        logger.error(f"Error reading file {filepath}: {e}")
         return None, None
 
     return np.array(angles, dtype=float), np.array(intensities, dtype=float)
+
+
+def calculate_d_value(two_theta_deg: float, wavelength: float = 1.78897) -> float:
+    """ブラッグの法則からd値を計算する (n=1)"""
+    if two_theta_deg <= 0 or two_theta_deg >= 180:
+        raise ValueError("2θは0より大きく180未満である必要があります。")
+    theta_rad = math.radians(two_theta_deg / 2.0)
+    return wavelength / (2 * math.sin(theta_rad))
+
+
+def calculate_lattice_constant(d: float, h: int, k: int, l: int) -> float:
+    """立方晶の格子定数を計算する"""
+    if h**2 + k**2 + l**2 == 0:
+        raise ValueError("(h,k,l)は(0,0,0)にできません。")
+    if d <= 0:
+        raise ValueError("d値は正の数である必要があります。")
+    return d * math.sqrt(h**2 + k**2 + l**2)
 
 
 def _find_and_draw_peaks(

@@ -1,9 +1,11 @@
 import tkinter as tk
 import os
+import logging
 from tkinter import ttk, filedialog, messagebox
 import numpy as np
 import math
 from matplotlib.figure import Figure
+from tkinterdnd2 import TkinterDnD, DND_FILES
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -250,6 +252,13 @@ class XRDPlotter(ttk.Frame):
         toolbar = NavigationToolbar2Tk(self.canvas, plot_panel)
         toolbar.update()
 
+        # ドラッグ＆ドロップの登録
+        self.file_listbox.drop_target_register(DND_FILES)
+        self.file_listbox.dnd_bind("<<Drop>>", self.on_drop_files)
+        # グラフ領域へのドロップも許可
+        self.canvas.get_tk_widget().drop_target_register(DND_FILES)
+        self.canvas.get_tk_widget().dnd_bind("<<Drop>>", self.on_drop_files)
+
         self._toggle_spacing_widget()
         self._toggle_minor_xticks_widgets()
         self.update_plot()
@@ -464,6 +473,28 @@ class XRDPlotter(ttk.Frame):
             self.on_file_select(None)
             self.schedule_update()
         self.add_to_recent(filepath)
+
+    def on_drop_files(self, event):
+        # TkinterDnDは複数パスを中括弧で囲んで渡す場合があるため、splitlistでパース
+        files = self.master.tk.splitlist(event.data)
+        for fp in files:
+            if fp not in self.file_data:
+                angles, intensities = data_analyzer.parse_ras_file(fp)
+                if angles is None or intensities is None:
+                    logger.warning(f"Drop reading failed: {fp}")
+                    messagebox.showwarning(
+                        "警告",
+                        f"ファイル {os.path.basename(fp)} の読み込みに失敗しました。",
+                    )
+                    continue
+                self.parsed_data[fp] = (angles, intensities)
+                self.file_data[fp] = os.path.basename(fp)
+                self.file_listbox.insert(tk.END, fp)
+                self.add_to_recent(fp)
+        if not self.file_listbox.curselection() and self.file_listbox.size() > 0:
+            self.file_listbox.selection_set(tk.END)
+            self.on_file_select(None)
+        self.schedule_update()
 
     def select_files(self):
         filepaths = filedialog.askopenfilenames(
@@ -874,7 +905,23 @@ class XRDPlotter(ttk.Frame):
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    # --- ロギングの初期設定 ---
+    log_dir = os.path.join(os.path.expanduser("~"), ".xrd_plotter")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "xrd_plotter.log")
+
+    logging.basicConfig(
+        level=logging.INFO,  # INFO以上のレベル（INFO, WARNING, ERROR等）を記録
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+        handlers=[
+            logging.FileHandler(log_file, encoding="utf-8"),  # ログファイルへの出力
+            logging.StreamHandler(),  # 開発用コンソールへの出力
+        ],
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("XRD Plotter アプリケーションを起動しました。")
+
+    root = TkinterDnD.Tk()
 
     # sv_ttkテーマを適用 ("light" または "dark" を選択可能)
     sv_ttk.set_theme("light")

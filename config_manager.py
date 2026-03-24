@@ -1,6 +1,9 @@
 import json
 import os
+import logging
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigManager:
@@ -18,7 +21,7 @@ class ConfigManager:
                 json.dump(config_data, f, indent=4, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"設定の保存中にエラーが発生しました: {e}")
+            logger.error(f"設定の保存中にエラーが発生しました: {e}", exc_info=True)
             return False
 
     @staticmethod
@@ -32,8 +35,8 @@ class ConfigManager:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
-            print(f"設定ファイルの形式が不正です: {e}")
+            logger.error(f"設定ファイルの形式が不正です: {e}")
             return None
         except Exception as e:
-            print(f"設定の読み込み中にエラーが発生しました: {e}")
+            logger.error(f"設定の読み込み中にエラーが発生しました: {e}", exc_info=True)
             return None

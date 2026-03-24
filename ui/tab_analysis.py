@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-import math
+import data_analyzer
 
 
 class AnalysisTab:
@@ -122,13 +122,10 @@ class AnalysisTab:
     def calculate_d_spacing(self, *args):
         try:
             two_theta_deg = float(self.app.d_spacing_input_2theta_var.get())
-            if two_theta_deg <= 0 or two_theta_deg >= 180:
-                self.app.d_spacing_result_var.set("エラー: 2θは0-180の範囲で入力")
-                return
-            theta_rad = math.radians(two_theta_deg / 2.0)
-            lambda_coka1 = 1.78897
-            d = lambda_coka1 / (2 * math.sin(theta_rad))
+            d = data_analyzer.calculate_d_value(two_theta_deg)
             self.app.d_spacing_result_var.set(f"{d:.5f} Å")
+        except ValueError as e:
+            self.app.d_spacing_result_var.set(f"エラー: {e}")
         except (ValueError, TypeError):
             self.app.d_spacing_result_var.set("エラー: 有効な数値を入力してください")
 
@@ -147,10 +144,9 @@ class AnalysisTab:
             h = int(self.app.lc_h_var.get())
             k = int(self.app.lc_k_var.get())
             l = int(self.app.lc_l_var.get())
-            if (h**2 + k**2 + l**2) == 0:
-                self.app.lc_result_var.set("エラー: (h,k,l)は(0,0,0)にできません")
-                return
-            a = d * math.sqrt(h**2 + k**2 + l**2)
+            a = data_analyzer.calculate_lattice_constant(d, h, k, l)
             self.app.lc_result_var.set(f"a = {a:.5f} Å")
+        except ValueError as e:
+            self.app.lc_result_var.set(f"エラー: {e}")
         except (ValueError, TypeError):
             self.app.lc_result_var.set("エラー: 有効な数値を入力してください")
