@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, NullLocator
 import numpy as np
 from typing import List, Tuple, Dict, Optional, Any
+from dataclasses import dataclass, field
 from scipy.signal import find_peaks
 
 
@@ -140,19 +141,37 @@ def _draw_reference_peaks(
             )
 
 
+@dataclass
+class PlotSettings:
+    """プロットに関する各種設定を保持するデータクラス"""
+
+    threshold: float
+    x_range: Tuple[Optional[float], Optional[float]]
+    show_legend: bool
+    stack: bool
+    spacing: float
+    appearance: Dict[str, Any]
+    reference_peaks: List[Dict[str, Any]] = field(default_factory=list)
+    peak_detection_settings: Optional[Dict[str, Any]] = None
+    legend_position: Optional[Tuple[float, float]] = None
+
+
 def draw_plot(
     ax: plt.Axes,
     plot_data_full: List[Dict[str, Any]],
-    threshold: float,
-    x_range: Tuple[Optional[float], Optional[float]],
-    reference_peaks: List[Dict[str, Any]],
-    show_legend: bool,
-    stack: bool,
-    spacing: float,
-    appearance: Dict[str, Any],
-    peak_detection_settings: Optional[Dict[str, Any]] = None,
-    legend_position: Optional[Tuple[float, float]] = None,
+    settings: PlotSettings,
 ) -> Optional[str]:
+    # 以降のコード変更を最小限にするため、設定値をローカル変数に展開
+    threshold = settings.threshold
+    x_range = settings.x_range
+    reference_peaks = settings.reference_peaks
+    show_legend = settings.show_legend
+    stack = settings.stack
+    spacing = settings.spacing
+    appearance = settings.appearance
+    peak_detection_settings = settings.peak_detection_settings
+    legend_position = settings.legend_position
+
     ax.clear()
 
     linewidth = appearance.get("linewidth", 1.0)

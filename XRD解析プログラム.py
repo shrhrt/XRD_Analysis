@@ -338,21 +338,22 @@ class XRDPlotter(tk.Frame):
             "min_width": self.peak_detection_width_var.get(),
         }
 
-        return {
-            "plot_data_full": plot_data_full,
-            "threshold": threshold,
-            "x_range": (xmin, xmax),
-            "reference_peaks": reference_peaks,
-            "show_legend": self.show_legend_var.get(),
-            "stack": self.stack_plots_var.get(),
-            "spacing": spacing,
-            "appearance": appearance_settings,
-            "peak_detection_settings": peak_detection_settings,
-        }
+        plot_settings = data_analyzer.PlotSettings(
+            threshold=threshold,
+            x_range=(xmin, xmax),
+            reference_peaks=reference_peaks,
+            show_legend=self.show_legend_var.get(),
+            stack=self.stack_plots_var.get(),
+            spacing=spacing,
+            appearance=appearance_settings,
+            peak_detection_settings=peak_detection_settings,
+        )
+
+        return plot_data_full, plot_settings
 
     def update_plot(self):
-        settings = self._get_current_plot_settings()
-        if not settings:
+        result = self._get_current_plot_settings()
+        if not result:
             self.ax.clear()
             self.ax.text(
                 0.5,
@@ -365,7 +366,9 @@ class XRDPlotter(tk.Frame):
             self.canvas.draw()
             return
 
-        if not settings["plot_data_full"]:
+        plot_data_full, settings = result
+
+        if not plot_data_full:
             self.ax.clear()
             self.ax.text(
                 0.5,
@@ -378,12 +381,14 @@ class XRDPlotter(tk.Frame):
             self.canvas.draw()
             return
 
-        match_math_font = settings["appearance"].get("match_math_font", False)
+        match_math_font = settings.appearance.get("match_math_font", False)
         rc_params = {"mathtext.default": "regular"} if match_math_font else {}
 
         with plt.rc_context(rc_params):
             self.ax.clear()
-            error_message = data_analyzer.draw_plot(ax=self.ax, **settings)
+            error_message = data_analyzer.draw_plot(
+                ax=self.ax, plot_data_full=plot_data_full, settings=settings
+            )
             if error_message:
                 messagebox.showinfo("情報", error_message)
             self.fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
@@ -521,14 +526,15 @@ class XRDPlotter(tk.Frame):
         return None
 
     def preview_figure(self):
-        settings = self._get_current_plot_settings()
-        if not settings or not settings["plot_data_full"]:
+        result = self._get_current_plot_settings()
+        if not result or not result[0]:
             messagebox.showwarning(
                 "警告", "プレビュー対象のデータがありません。", parent=self.master
             )
             return
 
-        settings["legend_position"] = self._get_legend_pos()
+        plot_data_full, settings = result
+        settings.legend_position = self._get_legend_pos()
 
         try:
             width = float(self.export_width_var.get())
@@ -549,11 +555,13 @@ class XRDPlotter(tk.Frame):
         fig = Figure(figsize=(width, height), dpi=preview_dpi)
         ax = fig.add_subplot(111)
 
-        match_math_font = settings["appearance"].get("match_math_font", False)
+        match_math_font = settings.appearance.get("match_math_font", False)
         rc_params = {"mathtext.default": "regular"} if match_math_font else {}
 
         with plt.rc_context(rc_params):
-            data_analyzer.draw_plot(ax=ax, **settings)
+            data_analyzer.draw_plot(
+                ax=ax, plot_data_full=plot_data_full, settings=settings
+            )
             fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
 
             canvas = FigureCanvasTkAgg(fig, master=preview_window)
@@ -571,14 +579,15 @@ class XRDPlotter(tk.Frame):
         preview_window.geometry(f"{width_px}x{height_px}")
 
     def save_figure(self):
-        settings = self._get_current_plot_settings()
-        if not settings or not settings["plot_data_full"]:
+        result = self._get_current_plot_settings()
+        if not result or not result[0]:
             messagebox.showwarning(
                 "警告", "保存対象のデータがありません。", parent=self.master
             )
             return
 
-        settings["legend_position"] = self._get_legend_pos()
+        plot_data_full, settings = result
+        settings.legend_position = self._get_legend_pos()
 
         try:
             width = float(self.export_width_var.get())
@@ -618,11 +627,13 @@ class XRDPlotter(tk.Frame):
         fig = Figure(figsize=(width, height), dpi=save_dpi)
         ax = fig.add_subplot(111)
 
-        match_math_font = settings["appearance"].get("match_math_font", False)
+        match_math_font = settings.appearance.get("match_math_font", False)
         rc_params = {"mathtext.default": "regular"} if match_math_font else {}
 
         with plt.rc_context(rc_params):
-            data_analyzer.draw_plot(ax=ax, **settings)
+            data_analyzer.draw_plot(
+                ax=ax, plot_data_full=plot_data_full, settings=settings
+            )
             # Adjust subplot parameters for the new figure
             fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
 
