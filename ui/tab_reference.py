@@ -74,6 +74,13 @@ class ReferencePeaksTab:
         menubutton.pack(side="left", fill="x", expand=True, padx=5)
         self._build_peak_preset_menu(menubutton)
 
+        ttk.Button(
+            preset_frame, text="SpinFilter", command=self.load_spin_filter_preset
+        ).pack(side="left", padx=(10, 0))
+        ttk.Button(preset_frame, text="クリア", command=self.clear_all_peaks).pack(
+            side="left", padx=(10, 0)
+        )
+
         peak_opts_frame = tk.Frame(top_container)
         peak_opts_frame.pack(fill="x")
         tk.Label(peak_opts_frame, text="フォントサイズ:").pack(side="left")
@@ -238,3 +245,100 @@ class ReferencePeaksTab:
                 self.app.schedule_update()
 
         return command
+
+    def clear_all_peaks(self):
+        for i in range(10):
+            if i < len(self.app.peak_name_vars):
+                self.app.peak_name_vars[i].set("")
+                self.app.peak_angle_vars[i].set("")
+                self.app.peak_visible_vars[i].set(False)
+                self.app.peak_color_vars[i].set("#000000")
+                self.app.peak_color_buttons[i].config(fg="#000000")
+                self.app.peak_style_vars[i].set("--")
+        self.app.schedule_update()
+
+    def load_spin_filter_preset(self):
+        spin_filter_data = [
+            {
+                "name": "Pt (111)",
+                "angle": "46.5",
+                "visible": True,
+                "color": "#000000",
+                "style": "--",
+            },
+            {
+                "name": "Pt (200)",
+                "angle": "54.2",
+                "visible": True,
+                "color": "#8000ff",
+                "style": "--",
+            },
+            {
+                "name": "γ-Fe2O3 (400)",
+                "angle": "50.9",
+                "visible": True,
+                "color": "#0000ff",
+                "style": "--",
+            },
+            {
+                "name": "Fe3O4 (400)",
+                "angle": "50.4",
+                "visible": True,
+                "color": "#000000",
+                "style": "--",
+            },
+            {
+                "name": "",
+                "angle": "120.1",
+                "visible": True,
+                "color": "#000000",
+                "style": "--",
+            },
+            {
+                "name": "",
+                "angle": "131.5",
+                "visible": True,
+                "color": "#000000",
+                "style": "--",
+            },
+            {
+                "name": "γ-Fe2O3 (004)",
+                "angle": "50.876",
+                "visible": False,
+                "color": "#009300",
+                "style": "--",
+            },
+            {
+                "name": "Pt (111)",
+                "angle": "46.50",
+                "visible": True,
+                "color": "#0000ff",
+                "style": "--",
+            },
+            {
+                "name": "Cr (002)",
+                "angle": "76.5",
+                "visible": True,
+                "color": "#000000",
+                "style": "--",
+            },
+            {
+                "name": "",
+                "angle": "",
+                "visible": False,
+                "color": "#000000",
+                "style": "--",
+            },
+        ]
+
+        for i, peak_data in enumerate(spin_filter_data):
+            if i < len(self.app.peak_name_vars):
+                self.app.peak_name_vars[i].set(peak_data.get("name", ""))
+                self.app.peak_angle_vars[i].set(peak_data.get("angle", ""))
+                self.app.peak_visible_vars[i].set(peak_data.get("visible", False))
+                color = peak_data.get("color", "#000000")
+                self.app.peak_color_vars[i].set(color)
+                self.app.peak_color_buttons[i].config(fg=color)
+                self.app.peak_style_vars[i].set(peak_data.get("style", "--"))
+
+        self.app.schedule_update()

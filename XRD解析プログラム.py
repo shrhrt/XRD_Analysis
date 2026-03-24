@@ -152,9 +152,10 @@ class XRDPlotter(ttk.Frame):
         self.peak_detection_width_var = tk.DoubleVar(value=1.0)
 
         self.recent_files = []
-        self.config_file = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "xrd_app_config.json"
-        )
+        # ユーザーのホームディレクトリ(C:\Users\ユーザー名\)の下に専用フォルダを作成
+        config_dir = os.path.join(os.path.expanduser("~"), ".xrd_plotter")
+        os.makedirs(config_dir, exist_ok=True)
+        self.config_file = os.path.join(config_dir, "xrd_app_config.json")
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self._debounce_job, self.file_data, self.parsed_data = None, {}, {}
