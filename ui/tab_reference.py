@@ -86,7 +86,7 @@ class ReferencePeaksTab:
         tk.Label(peak_opts_frame, text="フォントサイズ:").pack(side="left")
         ttk.Spinbox(
             peak_opts_frame,
-            textvariable=self.app.peak_label_fontsize_var,
+            textvariable=self.app.model.peak_label_fontsize_var,
             from_=1,
             to=100,
             command=self.app.schedule_update,
@@ -95,7 +95,7 @@ class ReferencePeaksTab:
         tk.Label(peak_opts_frame, text="Y位置(0-1):").pack(side="left", padx=(10, 0))
         ttk.Spinbox(
             peak_opts_frame,
-            textvariable=self.app.peak_label_y_var,
+            textvariable=self.app.model.peak_label_y_var,
             from_=0.0,
             to=1.0,
             increment=0.05,
@@ -107,7 +107,7 @@ class ReferencePeaksTab:
         )
         ttk.Spinbox(
             peak_opts_frame,
-            textvariable=self.app.peak_label_offset_var,
+            textvariable=self.app.model.peak_label_offset_var,
             from_=0.1,
             to=5,
             increment=0.1,
@@ -151,20 +151,20 @@ class ReferencePeaksTab:
             tk.Checkbutton(
                 self.app.peak_frame, variable=vis_var, command=self.app.schedule_update
             ).grid(row=i + 1, column=1)
-            self.app.peak_visible_vars.append(vis_var)
+            self.app.model.peak_visible_vars.append(vis_var)
 
             name_var = tk.StringVar()
             tk.Entry(self.app.peak_frame, textvariable=name_var).grid(
                 row=i + 1, column=2, padx=2, pady=2, sticky="ew"
             )
-            self.app.peak_name_vars.append(name_var)
+            self.app.model.peak_name_vars.append(name_var)
             name_var.trace_add("write", self.app.schedule_update)
 
             angle_var = tk.StringVar()
             tk.Entry(self.app.peak_frame, textvariable=angle_var).grid(
                 row=i + 1, column=3, padx=2, pady=2, sticky="ew"
             )
-            self.app.peak_angle_vars.append(angle_var)
+            self.app.model.peak_angle_vars.append(angle_var)
             angle_var.trace_add("write", self.app.schedule_update)
 
             color_var = tk.StringVar(value="#000000")
@@ -176,7 +176,7 @@ class ReferencePeaksTab:
                 command=self._create_color_picker_command(i),
             )
             color_button.grid(row=i + 1, column=4, padx=2, pady=2)
-            self.app.peak_color_vars.append(color_var)
+            self.app.model.peak_color_vars.append(color_var)
             self.app.peak_color_buttons.append(color_button)
 
             style_var = tk.StringVar(value=linestyle_map["破線"])
@@ -195,7 +195,7 @@ class ReferencePeaksTab:
                 ),
             )
             style_combo.grid(row=i + 1, column=5, padx=(2, 5), pady=2)
-            self.app.peak_style_vars.append(style_var)
+            self.app.model.peak_style_vars.append(style_var)
 
             tk.Button(
                 self.app.peak_frame,
@@ -220,27 +220,28 @@ class ReferencePeaksTab:
 
     def add_peak_to_list(self, peak_data, target_index, substance):
         if 0 <= target_index < 10:
-            self.app.peak_name_vars[target_index].set(
+            self.app.model.peak_name_vars[target_index].set(
                 f"{substance} {peak_data.get('name', '')}"
             )
-            self.app.peak_angle_vars[target_index].set(peak_data.get("angle", ""))
-            self.app.peak_visible_vars[target_index].set(True)
+            self.app.model.peak_angle_vars[target_index].set(peak_data.get("angle", ""))
+            self.app.model.peak_visible_vars[target_index].set(True)
         self.app.schedule_update()
 
     def clear_peak_row(self, index):
         if 0 <= index < 10:
-            self.app.peak_name_vars[index].set("")
-            self.app.peak_angle_vars[index].set("")
-            self.app.peak_visible_vars[index].set(False)
+            self.app.model.peak_name_vars[index].set("")
+            self.app.model.peak_angle_vars[index].set("")
+            self.app.model.peak_visible_vars[index].set(False)
         self.app.schedule_update()
 
     def _create_color_picker_command(self, index):
         def command():
             color_code = colorchooser.askcolor(
-                title="色を選択", initialcolor=self.app.peak_color_vars[index].get()
+                title="色を選択",
+                initialcolor=self.app.model.peak_color_vars[index].get(),
             )
             if color_code and color_code[1]:
-                self.app.peak_color_vars[index].set(color_code[1])
+                self.app.model.peak_color_vars[index].set(color_code[1])
                 self.app.peak_color_buttons[index].config(fg=color_code[1])
                 self.app.schedule_update()
 
@@ -248,13 +249,13 @@ class ReferencePeaksTab:
 
     def clear_all_peaks(self):
         for i in range(10):
-            if i < len(self.app.peak_name_vars):
-                self.app.peak_name_vars[i].set("")
-                self.app.peak_angle_vars[i].set("")
-                self.app.peak_visible_vars[i].set(False)
-                self.app.peak_color_vars[i].set("#000000")
+            if i < len(self.app.model.peak_name_vars):
+                self.app.model.peak_name_vars[i].set("")
+                self.app.model.peak_angle_vars[i].set("")
+                self.app.model.peak_visible_vars[i].set(False)
+                self.app.model.peak_color_vars[i].set("#000000")
                 self.app.peak_color_buttons[i].config(fg="#000000")
-                self.app.peak_style_vars[i].set("--")
+                self.app.model.peak_style_vars[i].set("--")
         self.app.schedule_update()
 
     def load_spin_filter_preset(self):
@@ -332,13 +333,13 @@ class ReferencePeaksTab:
         ]
 
         for i, peak_data in enumerate(spin_filter_data):
-            if i < len(self.app.peak_name_vars):
-                self.app.peak_name_vars[i].set(peak_data.get("name", ""))
-                self.app.peak_angle_vars[i].set(peak_data.get("angle", ""))
-                self.app.peak_visible_vars[i].set(peak_data.get("visible", False))
+            if i < len(self.app.model.peak_name_vars):
+                self.app.model.peak_name_vars[i].set(peak_data.get("name", ""))
+                self.app.model.peak_angle_vars[i].set(peak_data.get("angle", ""))
+                self.app.model.peak_visible_vars[i].set(peak_data.get("visible", False))
                 color = peak_data.get("color", "#000000")
-                self.app.peak_color_vars[i].set(color)
+                self.app.model.peak_color_vars[i].set(color)
                 self.app.peak_color_buttons[i].config(fg=color)
-                self.app.peak_style_vars[i].set(peak_data.get("style", "--"))
+                self.app.model.peak_style_vars[i].set(peak_data.get("style", "--"))
 
         self.app.schedule_update()

@@ -18,14 +18,14 @@ class ExportTab:
         ttk.Label(export_frame, text="幅 (inch):").grid(
             row=0, column=0, sticky="w", padx=5, pady=2
         )
-        ttk.Entry(export_frame, textvariable=self.app.export_width_var).grid(
+        ttk.Entry(export_frame, textvariable=self.app.model.export_width_var).grid(
             row=0, column=1, sticky="ew", padx=5, pady=2
         )
 
         ttk.Label(export_frame, text="高さ (inch):").grid(
             row=1, column=0, sticky="w", padx=5, pady=2
         )
-        ttk.Entry(export_frame, textvariable=self.app.export_height_var).grid(
+        ttk.Entry(export_frame, textvariable=self.app.model.export_height_var).grid(
             row=1, column=1, sticky="ew", padx=5, pady=2
         )
 
@@ -34,7 +34,7 @@ class ExportTab:
         )
         ttk.Combobox(
             export_frame,
-            textvariable=self.app.export_format_var,
+            textvariable=self.app.model.export_format_var,
             values=["png", "pdf", "svg"],
             state="readonly",
         ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)

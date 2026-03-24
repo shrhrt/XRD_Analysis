@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import data_analyzer
 from config_manager import ConfigManager
+from app_model import AppStateModel
 import sv_ttk
 from ui.tab_plot import PlotSettingsTab
 from ui.tab_reference import ReferencePeaksTab
@@ -28,130 +29,8 @@ class XRDPlotter(ttk.Frame):
         self.master.geometry("1280x720")
         self.pack(fill=tk.BOTH, expand=True)
 
-        (
-            self.peak_name_vars,
-            self.peak_angle_vars,
-            self.peak_visible_vars,
-            self.peak_color_vars,
-            self.peak_style_vars,
-            self.peak_color_buttons,
-        ) = [], [], [], [], [], []
-        self.xmin_var, self.xmax_var = (
-            tk.StringVar(value="30"),
-            tk.StringVar(value="130"),
-        )
-        self.threshold_var, self.legend_name_var = (
-            tk.StringVar(value="1"),
-            tk.StringVar(),
-        )
-        self.show_legend_var, self.stack_plots_var = (
-            tk.BooleanVar(value=True),
-            tk.BooleanVar(value=False),
-        )
-        self.legend_loc_var = tk.StringVar(value="best")
-        self.legend_frame_var = tk.BooleanVar(value=True)
-        self.legend_bgcolor_var = tk.StringVar(value="white")
-        self.legend_italic_var = tk.BooleanVar(value=False)
-        self.threshold_handling_var = tk.StringVar(value="clip")  # "hide" or "clip"
-        self.yscale_var = tk.StringVar(value="log")
-        self.font_family_var = tk.StringVar(value="sans-serif")
-        self.plot_spacing_var = tk.DoubleVar(value=3)
-        self.xlabel_var, self.ylabel_var = (
-            tk.StringVar(value="2θ/ω (degree)"),
-            tk.StringVar(value="Log Intensity (arb. Units)"),
-        )
-        self.axis_label_fontsize_var, self.tick_label_fontsize_var = (
-            tk.DoubleVar(value=20),
-            tk.DoubleVar(value=16),
-        )
-        self.legend_fontsize_var, self.plot_linewidth_var = (
-            tk.DoubleVar(value=10),
-            tk.DoubleVar(value=1.0),
-        )
-        self.tick_direction_var = tk.StringVar(value="in")
-        self.xaxis_major_tick_spacing_var, self.show_grid_var = (
-            tk.DoubleVar(value=5),
-            tk.BooleanVar(value=False),
-        )
-        self.ytop_padding_factor_var = tk.DoubleVar(value=1.5)
-        self.hide_major_xtick_labels_var, self.show_minor_xticks_var = (
-            tk.BooleanVar(value=False),
-            tk.BooleanVar(value=True),
-        )
-        self.xminor_tick_spacing_var = tk.DoubleVar(value=1.0)
-        self.peak_label_fontsize_var = tk.DoubleVar(value=9)
-        self.peak_label_offset_var = tk.DoubleVar(value=0.4)
-        self.peak_label_y_var = tk.DoubleVar(value=0.90)
-        self.match_math_font_var = tk.BooleanVar(value=False)
-        self.d_spacing_input_2theta_var, self.d_spacing_result_var = (
-            tk.StringVar(),
-            tk.StringVar(value="d-spacing (Å)"),
-        )
-        self.lc_input_d_var, self.lc_h_var, self.lc_k_var, self.lc_l_var = (
-            tk.StringVar(),
-            tk.StringVar(value="1"),
-            tk.StringVar(value="0"),
-            tk.StringVar(value="0"),
-        )
-        self.lc_result_var = tk.StringVar(value="a = ?")
-        self.export_width_var, self.export_height_var, self.export_format_var = (
-            tk.StringVar(value="6"),
-            tk.StringVar(value="6"),
-            tk.StringVar(value="png"),
-        )
-        self.selected_substance_var = tk.StringVar()
-
-        # List of tk variables to be saved/loaded
-        self._savable_vars = [
-            "xmin_var",
-            "xmax_var",
-            "threshold_var",
-            "show_legend_var",
-            "stack_plots_var",
-            "threshold_handling_var",
-            "plot_spacing_var",
-            "xlabel_var",
-            "ylabel_var",
-            "legend_loc_var",
-            "legend_frame_var",
-            "legend_bgcolor_var",
-            "legend_italic_var",
-            "yscale_var",
-            "font_family_var",
-            "axis_label_fontsize_var",
-            "tick_label_fontsize_var",
-            "legend_fontsize_var",
-            "plot_linewidth_var",
-            "tick_direction_var",
-            "xaxis_major_tick_spacing_var",
-            "show_grid_var",
-            "ytop_padding_factor_var",
-            "hide_major_xtick_labels_var",
-            "show_minor_xticks_var",
-            "xminor_tick_spacing_var",
-            "peak_label_fontsize_var",
-            "peak_label_offset_var",
-            "peak_label_y_var",
-            "match_math_font_var",
-            "d_spacing_input_2theta_var",
-            "lc_input_d_var",
-            "lc_h_var",
-            "lc_k_var",
-            "lc_l_var",
-            "export_width_var",
-            "export_height_var",
-            "export_format_var",
-            "peak_detection_enabled_var",
-            "peak_detection_height_var",
-            "peak_detection_prominence_var",
-            "peak_detection_width_var",
-        ]
-
-        # Analysis settings
-        self.peak_detection_enabled_var = tk.BooleanVar(value=False)
-        self.peak_detection_height_var = tk.DoubleVar(value=10)
-        self.peak_detection_prominence_var = tk.DoubleVar(value=10)
-        self.peak_detection_width_var = tk.DoubleVar(value=1.0)
+        self.model = AppStateModel()
+        self.peak_color_buttons = []  # UI要素なのでこちらに残す
 
         self.recent_files = []
         # ユーザーのホームディレクトリ(C:\Users\ユーザー名\)の下に専用フォルダを作成
@@ -264,7 +143,7 @@ class XRDPlotter(ttk.Frame):
         self.update_plot()
 
     def _toggle_spacing_widget(self, *args):
-        if self.stack_plots_var.get():
+        if self.model.stack_plots_var.get():
             self.spacing_label.grid()
             self.spacing_entry.grid()
         else:
@@ -273,7 +152,7 @@ class XRDPlotter(ttk.Frame):
         self.schedule_update()
 
     def _toggle_minor_xticks_widgets(self, *args):
-        if self.show_minor_xticks_var.get():
+        if self.model.show_minor_xticks_var.get():
             self.xminor_tick_spacing_label.grid()
             self.xminor_tick_spacing_entry.grid()
         else:
@@ -300,11 +179,17 @@ class XRDPlotter(ttk.Frame):
 
         try:
             threshold = (
-                float(self.threshold_var.get()) if self.threshold_var.get() else 0.0
+                float(self.model.threshold_var.get())
+                if self.model.threshold_var.get()
+                else 0.0
             )
-            spacing = self.plot_spacing_var.get()
-            xmin = float(self.xmin_var.get()) if self.xmin_var.get() else None
-            xmax = float(self.xmax_var.get()) if self.xmax_var.get() else None
+            spacing = self.model.plot_spacing_var.get()
+            xmin = (
+                float(self.model.xmin_var.get()) if self.model.xmin_var.get() else None
+            )
+            xmax = (
+                float(self.model.xmax_var.get()) if self.model.xmax_var.get() else None
+            )
 
             # Check for logical error between xmin and xmax
             if xmin is not None and xmax is not None and xmin >= xmax:
@@ -320,56 +205,56 @@ class XRDPlotter(ttk.Frame):
 
         reference_peaks = [
             {
-                "name": self.peak_name_vars[i].get().strip(),
-                "angle": float(self.peak_angle_vars[i].get().strip()),
-                "visible": self.peak_visible_vars[i].get(),
-                "color": self.peak_color_vars[i].get(),
-                "linestyle": self.peak_style_vars[i].get(),
+                "name": self.model.peak_name_vars[i].get().strip(),
+                "angle": float(self.model.peak_angle_vars[i].get().strip()),
+                "visible": self.model.peak_visible_vars[i].get(),
+                "color": self.model.peak_color_vars[i].get(),
+                "linestyle": self.model.peak_style_vars[i].get(),
             }
             for i in range(10)
-            if self.peak_angle_vars[i].get().strip()
+            if self.model.peak_angle_vars[i].get().strip()
         ]
 
         appearance_settings = {
-            "xlabel": self.xlabel_var.get(),
-            "ylabel": self.ylabel_var.get(),
-            "axis_label_fontsize": self.axis_label_fontsize_var.get(),
-            "tick_label_fontsize": self.tick_label_fontsize_var.get(),
-            "legend_fontsize": self.legend_fontsize_var.get(),
-            "linewidth": self.plot_linewidth_var.get(),
-            "tick_direction": self.tick_direction_var.get(),
-            "threshold_handling": self.threshold_handling_var.get(),
-            "xaxis_major_tick_spacing": self.xaxis_major_tick_spacing_var.get(),
-            "show_grid": self.show_grid_var.get(),
-            "ytop_padding_factor": self.ytop_padding_factor_var.get(),
-            "hide_major_xtick_labels": self.hide_major_xtick_labels_var.get(),
-            "show_minor_xticks": self.show_minor_xticks_var.get(),
-            "xminor_tick_spacing": self.xminor_tick_spacing_var.get(),
-            "peak_label_fontsize": self.peak_label_fontsize_var.get(),
-            "peak_label_offset": self.peak_label_offset_var.get(),
-            "peak_label_y": self.peak_label_y_var.get(),
-            "match_math_font": self.match_math_font_var.get(),
-            "legend_loc": self.legend_loc_var.get(),
-            "legend_frame": self.legend_frame_var.get(),
-            "legend_bgcolor": self.legend_bgcolor_var.get(),
-            "legend_italic": self.legend_italic_var.get(),
-            "yscale": self.yscale_var.get(),
-            "font_family": self.font_family_var.get(),
+            "xlabel": self.model.xlabel_var.get(),
+            "ylabel": self.model.ylabel_var.get(),
+            "axis_label_fontsize": self.model.axis_label_fontsize_var.get(),
+            "tick_label_fontsize": self.model.tick_label_fontsize_var.get(),
+            "legend_fontsize": self.model.legend_fontsize_var.get(),
+            "linewidth": self.model.plot_linewidth_var.get(),
+            "tick_direction": self.model.tick_direction_var.get(),
+            "threshold_handling": self.model.threshold_handling_var.get(),
+            "xaxis_major_tick_spacing": self.model.xaxis_major_tick_spacing_var.get(),
+            "show_grid": self.model.show_grid_var.get(),
+            "ytop_padding_factor": self.model.ytop_padding_factor_var.get(),
+            "hide_major_xtick_labels": self.model.hide_major_xtick_labels_var.get(),
+            "show_minor_xticks": self.model.show_minor_xticks_var.get(),
+            "xminor_tick_spacing": self.model.xminor_tick_spacing_var.get(),
+            "peak_label_fontsize": self.model.peak_label_fontsize_var.get(),
+            "peak_label_offset": self.model.peak_label_offset_var.get(),
+            "peak_label_y": self.model.peak_label_y_var.get(),
+            "match_math_font": self.model.match_math_font_var.get(),
+            "legend_loc": self.model.legend_loc_var.get(),
+            "legend_frame": self.model.legend_frame_var.get(),
+            "legend_bgcolor": self.model.legend_bgcolor_var.get(),
+            "legend_italic": self.model.legend_italic_var.get(),
+            "yscale": self.model.yscale_var.get(),
+            "font_family": self.model.font_family_var.get(),
         }
 
         peak_detection_settings = {
-            "enabled": self.peak_detection_enabled_var.get(),
-            "min_height": self.peak_detection_height_var.get(),
-            "min_prominence": self.peak_detection_prominence_var.get(),
-            "min_width": self.peak_detection_width_var.get(),
+            "enabled": self.model.peak_detection_enabled_var.get(),
+            "min_height": self.model.peak_detection_height_var.get(),
+            "min_prominence": self.model.peak_detection_prominence_var.get(),
+            "min_width": self.model.peak_detection_width_var.get(),
         }
 
         plot_settings = data_analyzer.PlotSettings(
             threshold=threshold,
             x_range=(xmin, xmax),
             reference_peaks=reference_peaks,
-            show_legend=self.show_legend_var.get(),
-            stack=self.stack_plots_var.get(),
+            show_legend=self.model.show_legend_var.get(),
+            stack=self.model.stack_plots_var.get(),
             spacing=spacing,
             appearance=appearance_settings,
             peak_detection_settings=peak_detection_settings,
@@ -531,7 +416,7 @@ class XRDPlotter(ttk.Frame):
             del self.parsed_data[selected_filepath]
         self.file_listbox.delete(selected_indices[0])
         self.legend_name_entry.config(state="disabled")
-        self.legend_name_var.set("")
+        self.model.legend_name_var.set("")
         if self.file_listbox.size() > 0:
             new_selection_index = min(selected_indices[0], self.file_listbox.size() - 1)
             self.file_listbox.selection_set(new_selection_index)
@@ -585,8 +470,8 @@ class XRDPlotter(ttk.Frame):
         settings.legend_position = self._get_legend_pos()
 
         try:
-            width = float(self.export_width_var.get())
-            height = float(self.export_height_var.get())
+            width = float(self.model.export_width_var.get())
+            height = float(self.model.export_height_var.get())
             if width <= 0 or height <= 0:
                 raise ValueError("サイズは正の値である必要があります。")
         except ValueError:
@@ -638,8 +523,8 @@ class XRDPlotter(ttk.Frame):
         settings.legend_position = self._get_legend_pos()
 
         try:
-            width = float(self.export_width_var.get())
-            height = float(self.export_height_var.get())
+            width = float(self.model.export_width_var.get())
+            height = float(self.model.export_height_var.get())
             if width <= 0 or height <= 0:
                 raise ValueError("サイズは正の値である必要があります。")
         except ValueError:
@@ -657,11 +542,11 @@ class XRDPlotter(ttk.Frame):
         filepath = filedialog.asksaveasfilename(
             title="グラフを保存",
             initialfile=default_filename,
-            defaultextension=f".{self.export_format_var.get()}",
+            defaultextension=f".{self.model.export_format_var.get()}",
             filetypes=[
                 (
-                    f"{self.export_format_var.get().upper()} files",
-                    f"*.{self.export_format_var.get()}",
+                    f"{self.model.export_format_var.get().upper()} files",
+                    f"*.{self.model.export_format_var.get()}",
                 ),
                 ("All files", "*.*"),
             ],
@@ -704,24 +589,24 @@ class XRDPlotter(ttk.Frame):
         selected_indices = self.file_listbox.curselection()
         if not selected_indices:
             self.legend_name_entry.config(state="disabled")
-            self.legend_name_var.set("")
+            self.model.legend_name_var.set("")
             return
         selected_filepath = self.file_listbox.get(selected_indices[0])
-        self.legend_name_var.set(self.file_data.get(selected_filepath, ""))
+        self.model.legend_name_var.set(self.file_data.get(selected_filepath, ""))
         self.legend_name_entry.config(state="normal")
 
     def on_legend_name_change(self, *args):
         selected_indices = self.file_listbox.curselection()
         if selected_indices:
             selected_filepath = self.file_listbox.get(selected_indices[0])
-            self.file_data[selected_filepath] = self.legend_name_var.get()
+            self.file_data[selected_filepath] = self.model.legend_name_var.get()
             self.schedule_update()
 
     def toggle_legend_visibility(self):
         if self.ax:
             legend = self.ax.get_legend()
             if legend:
-                legend.set_visible(self.show_legend_var.get())
+                legend.set_visible(self.model.show_legend_var.get())
                 self.canvas.draw_idle()
 
     def schedule_update(self, *args):
@@ -754,18 +639,18 @@ class XRDPlotter(ttk.Frame):
                 "file_data": self.file_data,
             },
             "variables": {
-                var_name: getattr(self, var_name).get()
-                for var_name in self._savable_vars
+                var_name: getattr(self.model, var_name).get()
+                for var_name in self.model.savable_vars
             },
             "reference_peaks": [
                 {
-                    "name": self.peak_name_vars[i].get(),
-                    "angle": self.peak_angle_vars[i].get(),
-                    "visible": self.peak_visible_vars[i].get(),
-                    "color": self.peak_color_vars[i].get(),
-                    "style": self.peak_style_vars[i].get(),
+                    "name": self.model.peak_name_vars[i].get(),
+                    "angle": self.model.peak_angle_vars[i].get(),
+                    "visible": self.model.peak_visible_vars[i].get(),
+                    "color": self.model.peak_color_vars[i].get(),
+                    "style": self.model.peak_style_vars[i].get(),
                 }
-                for i in range(len(self.peak_name_vars))
+                for i in range(len(self.model.peak_name_vars))
             ],
         }
         if include_recent:
@@ -783,7 +668,7 @@ class XRDPlotter(ttk.Frame):
             self.file_data.clear()
             self.parsed_data.clear()
             self.legend_name_entry.config(state="disabled")
-            self.legend_name_var.set("")
+            self.model.legend_name_var.set("")
 
         loaded_filepaths = settings.get("files", {}).get("filepaths", [])
         loaded_file_data = settings.get("files", {}).get("file_data", {})
@@ -814,29 +699,29 @@ class XRDPlotter(ttk.Frame):
 
         if "variables" in settings:
             for var_name, value in settings["variables"].items():
-                if hasattr(self, var_name):
+                if hasattr(self.model, var_name):
                     try:
-                        getattr(self, var_name).set(value)
+                        getattr(self.model, var_name).set(value)
                     except Exception:
                         pass
         elif "export_format" in settings:  # Backward compatibility
             if "export_format" in settings:
-                self.export_format_var.set(settings["export_format"])
+                self.model.export_format_var.set(settings["export_format"])
             if "export_width" in settings:
-                self.export_width_var.set(settings["export_width"])
+                self.model.export_width_var.set(settings["export_width"])
             if "export_height" in settings:
-                self.export_height_var.set(settings["export_height"])
+                self.model.export_height_var.set(settings["export_height"])
 
         if "reference_peaks" in settings:
             for i, peak_data in enumerate(settings["reference_peaks"]):
-                if i < len(self.peak_name_vars):
-                    self.peak_name_vars[i].set(peak_data.get("name", ""))
-                    self.peak_angle_vars[i].set(peak_data.get("angle", ""))
-                    self.peak_visible_vars[i].set(peak_data.get("visible", False))
+                if i < len(self.model.peak_name_vars):
+                    self.model.peak_name_vars[i].set(peak_data.get("name", ""))
+                    self.model.peak_angle_vars[i].set(peak_data.get("angle", ""))
+                    self.model.peak_visible_vars[i].set(peak_data.get("visible", False))
                     color = peak_data.get("color", "#000000")
-                    self.peak_color_vars[i].set(color)
+                    self.model.peak_color_vars[i].set(color)
                     self.peak_color_buttons[i].config(fg=color)
-                    self.peak_style_vars[i].set(peak_data.get("style", "--"))
+                    self.model.peak_style_vars[i].set(peak_data.get("style", "--"))
 
         self._toggle_spacing_widget()
         self._toggle_minor_xticks_widgets()

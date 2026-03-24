@@ -76,7 +76,7 @@ class PlotSettingsTab:
         )
         self.app.xmin_entry = ttk.Entry(
             graph_settings_frame,
-            textvariable=self.app.xmin_var,
+            textvariable=self.app.model.xmin_var,
             validate="all",
             validatecommand=self.app.vcmd_float,
         )
@@ -87,7 +87,7 @@ class PlotSettingsTab:
         )
         self.app.xmax_entry = ttk.Entry(
             graph_settings_frame,
-            textvariable=self.app.xmax_var,
+            textvariable=self.app.model.xmax_var,
             validate="all",
             validatecommand=self.app.vcmd_float,
         )
@@ -98,7 +98,7 @@ class PlotSettingsTab:
         )
         self.app.threshold_entry = ttk.Entry(
             graph_settings_frame,
-            textvariable=self.app.threshold_var,
+            textvariable=self.app.model.threshold_var,
             validate="all",
             validatecommand=self.app.vcmd_float,
         )
@@ -112,14 +112,14 @@ class PlotSettingsTab:
         ttk.Radiobutton(
             threshold_handling_frame,
             text="非表示",
-            variable=self.app.threshold_handling_var,
+            variable=self.app.model.threshold_handling_var,
             value="hide",
             command=self.app.schedule_update,
         ).pack(side="left")
         ttk.Radiobutton(
             threshold_handling_frame,
             text="最小値に固定",
-            variable=self.app.threshold_handling_var,
+            variable=self.app.model.threshold_handling_var,
             value="clip",
             command=self.app.schedule_update,
         ).pack(side="left")
@@ -130,14 +130,14 @@ class PlotSettingsTab:
         ttk.Radiobutton(
             yscale_frame,
             text="Log",
-            variable=self.app.yscale_var,
+            variable=self.app.model.yscale_var,
             value="log",
             command=self.app.schedule_update,
         ).pack(side="left")
         ttk.Radiobutton(
             yscale_frame,
             text="Linear",
-            variable=self.app.yscale_var,
+            variable=self.app.model.yscale_var,
             value="linear",
             command=self.app.schedule_update,
         ).pack(side="left")
@@ -147,7 +147,7 @@ class PlotSettingsTab:
         )
         self.app.legend_name_entry = ttk.Entry(
             graph_settings_frame,
-            textvariable=self.app.legend_name_var,
+            textvariable=self.app.model.legend_name_var,
             state="disabled",
         )
         self.app.legend_name_entry.grid(row=5, column=1, sticky="ew", padx=5, pady=2)
@@ -155,14 +155,14 @@ class PlotSettingsTab:
         self.app.show_legend_check = ttk.Checkbutton(
             graph_settings_frame,
             text="凡例を表示する",
-            variable=self.app.show_legend_var,
+            variable=self.app.model.show_legend_var,
             command=self.app.schedule_update,
         )
         self.app.show_legend_check.grid(row=6, column=0, sticky="w", padx=5, pady=2)
 
         self.app.legend_loc_combo = ttk.Combobox(
             graph_settings_frame,
-            textvariable=self.app.legend_loc_var,
+            textvariable=self.app.model.legend_loc_var,
             values=[
                 "best",
                 "upper right",
@@ -188,13 +188,13 @@ class PlotSettingsTab:
         ttk.Checkbutton(
             legend_style_frame,
             text="枠線",
-            variable=self.app.legend_frame_var,
+            variable=self.app.model.legend_frame_var,
             command=self.app.schedule_update,
         ).pack(side="left")
         ttk.Checkbutton(
             legend_style_frame,
             text="イタリック",
-            variable=self.app.legend_italic_var,
+            variable=self.app.model.legend_italic_var,
             command=self.app.schedule_update,
         ).pack(side="left")
         ttk.Label(legend_style_frame, text="背景色:").pack(side="left", padx=(10, 2))
@@ -207,18 +207,18 @@ class PlotSettingsTab:
             command=self._choose_legend_bgcolor,
         )
         self.app.legend_bg_button.pack(side="left")
-        self.app.legend_bgcolor_var.trace_add(
+        self.app.model.legend_bgcolor_var.trace_add(
             "write",
             lambda *args: self.app.legend_bg_button.config(
-                fg=self.app.legend_bgcolor_var.get()
+                fg=self.app.model.legend_bgcolor_var.get()
             ),
         )
-        self.app.legend_bg_button.config(fg=self.app.legend_bgcolor_var.get())
+        self.app.legend_bg_button.config(fg=self.app.model.legend_bgcolor_var.get())
 
         ttk.Checkbutton(
             graph_settings_frame,
             text="グラフを縦に並べる",
-            variable=self.app.stack_plots_var,
+            variable=self.app.model.stack_plots_var,
             command=self.app._toggle_spacing_widget,
         ).grid(row=8, column=0, columnspan=2, sticky="w", padx=5, pady=2)
 
@@ -229,7 +229,7 @@ class PlotSettingsTab:
 
         self.app.spacing_entry = tk.Scale(
             graph_settings_frame,
-            variable=self.app.plot_spacing_var,
+            variable=self.app.model.plot_spacing_var,
             orient=tk.HORIZONTAL,
             from_=0,
             to=5,
@@ -242,13 +242,15 @@ class PlotSettingsTab:
         self.app.xmin_entry.bind("<Return>", self.app.schedule_update)
         self.app.xmax_entry.bind("<FocusOut>", self.app.schedule_update)
         self.app.xmax_entry.bind("<Return>", self.app.schedule_update)
-        self.app.threshold_var.trace_add("write", self.app.schedule_update)
-        self.app.legend_name_var.trace_add("write", self.app.on_legend_name_change)
+        self.app.model.threshold_var.trace_add("write", self.app.schedule_update)
+        self.app.model.legend_name_var.trace_add(
+            "write", self.app.on_legend_name_change
+        )
 
     def _choose_legend_bgcolor(self):
         color = colorchooser.askcolor(
-            title="凡例の背景色", initialcolor=self.app.legend_bgcolor_var.get()
+            title="凡例の背景色", initialcolor=self.app.model.legend_bgcolor_var.get()
         )
         if color and color[1]:
-            self.app.legend_bgcolor_var.set(color[1])
+            self.app.model.legend_bgcolor_var.set(color[1])
             self.app.schedule_update()
