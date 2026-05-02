@@ -1,0 +1,6 @@
+matplotlib
+numpy
+tkinterdnd2
+sv_ttk==2.6.1
+pytest
+pyinstaller
