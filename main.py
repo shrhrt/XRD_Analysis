@@ -10,9 +10,9 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
-import data_analyzer
-from config_manager import ConfigManager
-from app_model import AppStateModel
+from core import data_analyzer
+from core.config_manager import ConfigManager
+from core.app_model import AppStateModel
 import sv_ttk
 from ui.tab_plot import PlotSettingsTab
 from ui.tab_reference import ReferencePeaksTab

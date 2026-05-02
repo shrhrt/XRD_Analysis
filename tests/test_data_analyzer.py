@@ -4,7 +4,11 @@ import pytest
 import math
 
 # テスト対象の関数をインポート
-from data_analyzer import parse_ras_file, calculate_d_value, calculate_lattice_constant
+from core.data_analyzer import (
+    parse_ras_file,
+    calculate_d_value,
+    calculate_lattice_constant,
+)
 
 
 def test_parse_ras_file_success(tmp_path):

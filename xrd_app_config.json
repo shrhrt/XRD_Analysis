@@ -1,0 +1,142 @@
+{
+    "files": {
+        "filepaths": [
+            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251206_Fe3O4_MgO_XRD.ras",
+            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119re_Fe3O4_MgO_XRD.ras",
+            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119_Fe3O4_MgO_XRD.ras"
+        ],
+        "file_data": {
+            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251206_Fe3O4_MgO_XRD.ras": "251206_Fe3O4_MgO_XRD.ras",
+            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119re_Fe3O4_MgO_XRD.ras": "251119re_Fe3O4_MgO_XRD.ras",
+            "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119_Fe3O4_MgO_XRD.ras": "251119_Fe3O4_MgO_XRD.ras"
+        }
+    },
+    "variables": {
+        "xmin_var": "40",
+        "xmax_var": "60",
+        "threshold_var": "1",
+        "show_legend_var": true,
+        "stack_plots_var": true,
+        "threshold_handling_var": "clip",
+        "plot_spacing_var": 2.4,
+        "xlabel_var": "2θ/ω (degree)",
+        "ylabel_var": "Log Intensity (arb. Units)",
+        "legend_loc_var": "upper right",
+        "legend_frame_var": false,
+        "legend_bgcolor_var": "#48f83f",
+        "legend_italic_var": false,
+        "yscale_var": "log",
+        "font_family_var": "sans-serif",
+        "axis_label_fontsize_var": 19.0,
+        "tick_label_fontsize_var": 16.0,
+        "legend_fontsize_var": 17.0,
+        "plot_linewidth_var": 1.2,
+        "tick_direction_var": "in",
+        "xaxis_major_tick_spacing_var": 5.0,
+        "show_grid_var": false,
+        "ytop_padding_factor_var": 1.2,
+        "hide_major_xtick_labels_var": false,
+        "show_minor_xticks_var": true,
+        "xminor_tick_spacing_var": 1.0,
+        "peak_label_fontsize_var": 16.0,
+        "peak_label_offset_var": 0.3,
+        "peak_label_y_var": 0.93,
+        "match_math_font_var": false,
+        "d_spacing_input_2theta_var": "55.17",
+        "lc_input_d_var": "1.93167",
+        "lc_h_var": "2",
+        "lc_k_var": "0",
+        "lc_l_var": "0",
+        "export_width_var": "8",
+        "export_height_var": "10",
+        "export_format_var": "png",
+        "peak_detection_enabled_var": false,
+        "peak_detection_height_var": 0.0,
+        "peak_detection_prominence_var": 0.0,
+        "peak_detection_width_var": 2.0
+    },
+    "reference_peaks": [
+        {
+            "name": "Pt (111)",
+            "angle": "46.5",
+            "visible": true,
+            "color": "#000000",
+            "style": "--"
+        },
+        {
+            "name": "Pt (200)",
+            "angle": "54.2",
+            "visible": true,
+            "color": "#8000ff",
+            "style": "--"
+        },
+        {
+            "name": "γ-Fe2O3 (400)",
+            "angle": "50.9",
+            "visible": true,
+            "color": "#0000ff",
+            "style": "--"
+        },
+        {
+            "name": "Fe3O4 (400)",
+            "angle": "50.4",
+            "visible": true,
+            "color": "#000000",
+            "style": "--"
+        },
+        {
+            "name": "",
+            "angle": "120.1",
+            "visible": true,
+            "color": "#000000",
+            "style": "--"
+        },
+        {
+            "name": "",
+            "angle": "131.5",
+            "visible": true,
+            "color": "#000000",
+            "style": "--"
+        },
+        {
+            "name": "γ-Fe2O3 (004)",
+            "angle": "50.876",
+            "visible": false,
+            "color": "#009300",
+            "style": "--"
+        },
+        {
+            "name": "Pt (111)",
+            "angle": "46.50",
+            "visible": true,
+            "color": "#0000ff",
+            "style": "--"
+        },
+        {
+            "name": "Cr (002)",
+            "angle": "76.5",
+            "visible": true,
+            "color": "#000000",
+            "style": "--"
+        },
+        {
+            "name": "",
+            "angle": "",
+            "visible": false,
+            "color": "#000000",
+            "style": "--"
+        }
+    ],
+    "recent_files": [
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119_Fe3O4_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251119re_Fe3O4_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251206_Fe3O4_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251128_Fe3O4_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_MgO/251118_Fe3O4_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/Fe3O4_Pt_MgO/251212_Fe3O4_Pt_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/MgO_Pt_Fe_MgO/251205_MgO_Pt_Cr_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/MgO_Pt_Fe_MgO/251121_MgO_Pt_Fe_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/MgO_Pt_Fe_MgO/251120_MgO_Pt_Fe_MgO_XRD.ras",
+        "C:/Users/kusar/OneDrive - 筑波大学/ドキュメント/研究/Fe_Fe3O4_MgO_Pt_Fe_MgO/SmartLab/MgO_Pt_MgO/MgO_Pt_Fe_MgO/251112_MgO_Pt_Fe_MgO_XRD.ras"
+    ]
+}
