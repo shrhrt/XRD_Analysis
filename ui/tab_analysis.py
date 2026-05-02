@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-import data_analyzer
+from core import data_analyzer
 
 
 class AnalysisTab:
