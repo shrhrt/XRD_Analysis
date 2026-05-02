@@ -26,22 +26,24 @@ class PlotSettingsTab:
         file_button_frame.columnconfigure(2, weight=1)
 
         ttk.Button(
-            file_button_frame, text="ファイルを選択", command=self.app.select_files
+            file_button_frame,
+            text="ファイルを選択",
+            command=self.app.file_handler.select_files,
         ).grid(row=0, column=0, sticky="ew", padx=(0, 2))
         ttk.Button(
             file_button_frame,
             text="選択したファイルを削除",
-            command=self.app.remove_selected_file,
+            command=self.app.file_handler.remove_selected_file,
         ).grid(row=0, column=1, sticky="ew", padx=(2, 0))
 
         reorder_frame = ttk.Frame(file_button_frame)
         reorder_frame.grid(row=0, column=2, rowspan=2, padx=(5, 0))
-        ttk.Button(reorder_frame, text="↑", command=self.app.move_file_up).pack(
-            fill="x"
-        )
-        ttk.Button(reorder_frame, text="↓", command=self.app.move_file_down).pack(
-            fill="x"
-        )
+        ttk.Button(
+            reorder_frame, text="↑", command=self.app.file_handler.move_file_up
+        ).pack(fill="x")
+        ttk.Button(
+            reorder_frame, text="↓", command=self.app.file_handler.move_file_down
+        ).pack(fill="x")
 
         listbox_frame = ttk.Frame(file_frame)
         listbox_frame.grid(
@@ -54,7 +56,9 @@ class PlotSettingsTab:
             listbox_frame, selectmode=tk.SINGLE, height=6, exportselection=False
         )
         self.app.file_listbox.grid(row=0, column=0, sticky="nsew")
-        self.app.file_listbox.bind("<<ListboxSelect>>", self.app.on_file_select)
+        self.app.file_listbox.bind(
+            "<<ListboxSelect>>", self.app.file_handler.on_file_select
+        )
 
         v_scrollbar = ttk.Scrollbar(
             listbox_frame, orient=tk.VERTICAL, command=self.app.file_listbox.yview
@@ -244,7 +248,7 @@ class PlotSettingsTab:
         self.app.xmax_entry.bind("<Return>", self.app.schedule_update)
         self.app.model.threshold_var.trace_add("write", self.app.schedule_update)
         self.app.model.legend_name_var.trace_add(
-            "write", self.app.on_legend_name_change
+            "write", self.app.file_handler.on_legend_name_change
         )
 
     def _choose_legend_bgcolor(self):
