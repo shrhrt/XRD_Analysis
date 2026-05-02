@@ -1,14 +1,12 @@
 import tkinter as tk
 import os
 import logging
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk
 from matplotlib.figure import Figure
-from tkinterdnd2 import TkinterDnD, DND_FILES
+from tkinterdnd2 import DND_FILES
 
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
-from core import data_analyzer
 from core.app_model import AppStateModel
 import sv_ttk
 from ui.tab_plot import PlotSettingsTab
