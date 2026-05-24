@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import colorchooser
+from ui.range_slider import RangeSlider
 
 
 class PlotSettingsTab:
@@ -75,30 +76,45 @@ class PlotSettingsTab:
         graph_settings_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         graph_settings_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(graph_settings_frame, text="横軸 最小値:").grid(
-            row=0, column=0, sticky="w", padx=5, pady=2
-        )
-        self.app.xmin_entry = ttk.Entry(
+        self._range_slider = RangeSlider(
             graph_settings_frame,
-            textvariable=self.app.model.xmin_var,
-            validate="all",
-            validatecommand=self.app.vcmd_float,
+            self.app.model.xmin_var,
+            self.app.model.xmax_var,
+            from_=0,
+            to=180,
         )
-        self.app.xmin_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
+        self._range_slider.grid(row=0, column=0, columnspan=2, sticky="ew", padx=5, pady=(4, 0))
 
-        ttk.Label(graph_settings_frame, text="横軸 最大値:").grid(
+        ttk.Label(graph_settings_frame, text="横軸 最小値:").grid(
             row=1, column=0, sticky="w", padx=5, pady=2
         )
-        self.app.xmax_entry = ttk.Entry(
+        self.app.xmin_entry = ttk.Spinbox(
             graph_settings_frame,
-            textvariable=self.app.model.xmax_var,
+            textvariable=self.app.model.xmin_var,
+            from_=0,
+            to=180,
+            increment=1,
             validate="all",
             validatecommand=self.app.vcmd_float,
         )
-        self.app.xmax_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        self.app.xmin_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+
+        ttk.Label(graph_settings_frame, text="横軸 最大値:").grid(
+            row=2, column=0, sticky="w", padx=5, pady=2
+        )
+        self.app.xmax_entry = ttk.Spinbox(
+            graph_settings_frame,
+            textvariable=self.app.model.xmax_var,
+            from_=0,
+            to=180,
+            increment=1,
+            validate="all",
+            validatecommand=self.app.vcmd_float,
+        )
+        self.app.xmax_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
 
         ttk.Label(graph_settings_frame, text="強度しきい値:").grid(
-            row=2, column=0, sticky="w", padx=5, pady=2
+            row=3, column=0, sticky="w", padx=5, pady=2
         )
         self.app.threshold_entry = ttk.Entry(
             graph_settings_frame,
@@ -106,10 +122,10 @@ class PlotSettingsTab:
             validate="all",
             validatecommand=self.app.vcmd_float,
         )
-        self.app.threshold_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        self.app.threshold_entry.grid(row=3, column=1, sticky="ew", padx=5, pady=2)
 
         threshold_handling_frame = ttk.Frame(graph_settings_frame)
-        threshold_handling_frame.grid(row=3, column=0, columnspan=2, sticky="w", padx=5)
+        threshold_handling_frame.grid(row=4, column=0, columnspan=2, sticky="w", padx=5)
         ttk.Label(threshold_handling_frame, text="しきい値以下のデータ:").pack(
             side="left"
         )
@@ -129,7 +145,7 @@ class PlotSettingsTab:
         ).pack(side="left")
 
         yscale_frame = ttk.Frame(graph_settings_frame)
-        yscale_frame.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        yscale_frame.grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=2)
         ttk.Label(yscale_frame, text="Y軸スケール:").pack(side="left")
         ttk.Radiobutton(
             yscale_frame,
@@ -147,14 +163,14 @@ class PlotSettingsTab:
         ).pack(side="left")
 
         ttk.Label(graph_settings_frame, text="凡例名 (数式は$で囲む):").grid(
-            row=5, column=0, sticky="w", padx=5, pady=2
+            row=6, column=0, sticky="w", padx=5, pady=2
         )
         self.app.legend_name_entry = ttk.Entry(
             graph_settings_frame,
             textvariable=self.app.model.legend_name_var,
             state="disabled",
         )
-        self.app.legend_name_entry.grid(row=5, column=1, sticky="ew", padx=5, pady=2)
+        self.app.legend_name_entry.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
 
         self.app.show_legend_check = ttk.Checkbutton(
             graph_settings_frame,
@@ -162,7 +178,7 @@ class PlotSettingsTab:
             variable=self.app.model.show_legend_var,
             command=self.app.schedule_update,
         )
-        self.app.show_legend_check.grid(row=6, column=0, sticky="w", padx=5, pady=2)
+        self.app.show_legend_check.grid(row=7, column=0, sticky="w", padx=5, pady=2)
 
         self.app.legend_loc_combo = ttk.Combobox(
             graph_settings_frame,
@@ -182,12 +198,12 @@ class PlotSettingsTab:
             ],
             state="readonly",
         )
-        self.app.legend_loc_combo.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
+        self.app.legend_loc_combo.grid(row=7, column=1, sticky="ew", padx=5, pady=2)
         self.app.legend_loc_combo.bind("<<ComboboxSelected>>", self.app.schedule_update)
 
         legend_style_frame = ttk.Frame(graph_settings_frame)
         legend_style_frame.grid(
-            row=7, column=0, columnspan=2, sticky="w", padx=5, pady=2
+            row=8, column=0, columnspan=2, sticky="w", padx=5, pady=2
         )
         ttk.Checkbutton(
             legend_style_frame,
@@ -224,12 +240,12 @@ class PlotSettingsTab:
             text="グラフを縦に並べる",
             variable=self.app.model.stack_plots_var,
             command=self.app._toggle_spacing_widget,
-        ).grid(row=8, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+        ).grid(row=9, column=0, columnspan=2, sticky="w", padx=5, pady=2)
 
         self.app.spacing_label = ttk.Label(
             graph_settings_frame, text="グラフの間隔 (10^n)"
         )
-        self.app.spacing_label.grid(row=9, column=0, sticky="w", padx=5, pady=2)
+        self.app.spacing_label.grid(row=10, column=0, sticky="w", padx=5, pady=2)
 
         self.app.spacing_entry = tk.Scale(
             graph_settings_frame,
@@ -240,12 +256,11 @@ class PlotSettingsTab:
             resolution=0.1,
             command=self.app.schedule_update,
         )
-        self.app.spacing_entry.grid(row=9, column=1, sticky="ew", padx=5, pady=2)
+        self.app.spacing_entry.grid(row=10, column=1, sticky="ew", padx=5, pady=2)
 
-        self.app.xmin_entry.bind("<FocusOut>", self.app.schedule_update)
-        self.app.xmin_entry.bind("<Return>", self.app.schedule_update)
-        self.app.xmax_entry.bind("<FocusOut>", self.app.schedule_update)
-        self.app.xmax_entry.bind("<Return>", self.app.schedule_update)
+        for entry in (self.app.xmin_entry, self.app.xmax_entry):
+            entry.bind("<FocusOut>", self.app.schedule_update)
+            entry.bind("<Return>", self.app.schedule_update)
         self.app.model.threshold_var.trace_add("write", self.app.schedule_update)
         self.app.model.legend_name_var.trace_add(
             "write", self.app.file_handler.on_legend_name_change
