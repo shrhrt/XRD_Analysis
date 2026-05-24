@@ -72,10 +72,10 @@ class AppStateModel:
 
         # --- テキストアノテーション ---
         self.annotation_visible_var = tk.BooleanVar(value=False)
-        self.annotation_text_var = tk.StringVar(value="")
+        self.annotation_text_var = tk.StringVar(value="$\\boldsymbol{k}$//MgO[001]\nCo Kα₁")
         self.annotation_x_var = tk.DoubleVar(value=0.72)
         self.annotation_y_var = tk.DoubleVar(value=0.95)
-        self.annotation_fontsize_var = tk.DoubleVar(value=12)
+        self.annotation_fontsize_var = tk.DoubleVar(value=16)
 
         # --- エクスポート関連 ---
         self.export_width_var = tk.StringVar(value="6")

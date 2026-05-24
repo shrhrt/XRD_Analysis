@@ -198,23 +198,37 @@ class AppearanceTab:
         self._ann_text.bind("<FocusOut>", self._on_ann_text_change)
         self.app.model.annotation_text_var.trace_add("write", self._sync_ann_text_from_var)
 
-        ttk.Label(ann_frame, text="X位置 (0〜1):").grid(row=2, column=0, sticky="w", padx=5, pady=2)
-        ttk.Spinbox(
-            ann_frame,
-            textvariable=self.app.model.annotation_x_var,
-            from_=0.0, to=1.0, increment=0.05,
-            format="%.2f",
-            command=self.app.schedule_update,
-        ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        ttk.Label(ann_frame, text="X位置:").grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        x_frame = ttk.Frame(ann_frame)
+        x_frame.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        x_frame.columnconfigure(0, weight=1)
+        x_val_lbl = ttk.Label(x_frame, text=f"{self.app.model.annotation_x_var.get():.2f}", width=4, anchor="e")
+        x_val_lbl.grid(row=0, column=1, padx=(4, 0))
+        ttk.Scale(
+            x_frame,
+            variable=self.app.model.annotation_x_var,
+            from_=0.0, to=1.0, orient="horizontal",
+            command=lambda v: (
+                x_val_lbl.config(text=f"{float(v):.2f}"),
+                self.app.schedule_update(),
+            ),
+        ).grid(row=0, column=0, sticky="ew")
 
-        ttk.Label(ann_frame, text="Y位置 (0〜1):").grid(row=3, column=0, sticky="w", padx=5, pady=2)
-        ttk.Spinbox(
-            ann_frame,
-            textvariable=self.app.model.annotation_y_var,
-            from_=0.0, to=1.0, increment=0.05,
-            format="%.2f",
-            command=self.app.schedule_update,
-        ).grid(row=3, column=1, sticky="ew", padx=5, pady=2)
+        ttk.Label(ann_frame, text="Y位置:").grid(row=3, column=0, sticky="w", padx=5, pady=2)
+        y_frame = ttk.Frame(ann_frame)
+        y_frame.grid(row=3, column=1, sticky="ew", padx=5, pady=2)
+        y_frame.columnconfigure(0, weight=1)
+        y_val_lbl = ttk.Label(y_frame, text=f"{self.app.model.annotation_y_var.get():.2f}", width=4, anchor="e")
+        y_val_lbl.grid(row=0, column=1, padx=(4, 0))
+        ttk.Scale(
+            y_frame,
+            variable=self.app.model.annotation_y_var,
+            from_=0.0, to=1.0, orient="horizontal",
+            command=lambda v: (
+                y_val_lbl.config(text=f"{float(v):.2f}"),
+                self.app.schedule_update(),
+            ),
+        ).grid(row=0, column=0, sticky="ew")
 
         ttk.Label(ann_frame, text="フォントサイズ:").grid(row=4, column=0, sticky="w", padx=5, pady=2)
         ttk.Spinbox(
