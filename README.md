@@ -1,5 +1,5 @@
 <div align="center">
-  <h1><img src="assets/XRD_ANALYSIS_ICON.ico" width="60" alt="App Icon" style="vertical-align: middle; margin-right: 10px;"> XRD Data Plotter</h1>
+  <h1><img src="assets/XRD_ANALYSIS_ICON.ico" width="60" alt="App Icon" style="vertical-align: middle; margin-right: 10px;"> XRD ANALYSIS</h1>
   <p>X線回折（XRD）データの可視化・ピークフィット・解析のためのデスクトップGUIアプリケーション</p>
   <img src="https://img.shields.io/badge/Python-3.12+-blue?logo=python" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows" alt="Platform">
@@ -211,7 +211,7 @@ sv_ttk はボタン背景色をTCLエレメントレベルで上書きするた�
 
 **ステップ 1 — ダウンロード**
 
-GitHubの [Releases ページ](https://github.com/shrhrt/XRD_Analysis/releases) から最新の ZIP をダウンロードして解凍する。
+GitHubの [Releases ページ](https://github.com/shrhrt/XRD_ANALYSIS/releases) から最新の ZIP をダウンロードして解凍する。
 
 **ステップ 2 — 起動**
 
@@ -244,8 +244,8 @@ GitHubの [Releases ページ](https://github.com/shrhrt/XRD_Analysis/releases) 
 
 ```bat
 :: リポジトリのクローン
-git clone https://github.com/shrhrt/XRD_Analysis.git
-cd XRD_Analysis
+git clone https://github.com/shrhrt/XRD_ANALYSIS.git
+cd XRD_ANALYSIS
 
 :: 仮想環境の作成・有効化
 python -m venv venv
