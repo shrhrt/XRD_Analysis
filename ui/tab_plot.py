@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import colorchooser
 from ui.range_slider import RangeSlider
+from ui import style_manager
 
 
 class PlotSettingsTab:
@@ -26,16 +27,14 @@ class PlotSettingsTab:
         file_button_frame.columnconfigure(1, weight=1)
         file_button_frame.columnconfigure(2, weight=1)
 
-        ttk.Button(
+        style_manager.primary_btn(
             file_button_frame,
             text="ファイルを選択",
-            style="Primary.TButton",
             command=self.app.file_handler.select_files,
         ).grid(row=0, column=0, sticky="ew", padx=(0, 2))
-        ttk.Button(
+        style_manager.danger_btn(
             file_button_frame,
             text="選択したファイルを削除",
-            style="Danger.TButton",
             command=self.app.file_handler.remove_selected_file,
         ).grid(row=0, column=1, sticky="ew", padx=(2, 0))
 
@@ -57,7 +56,7 @@ class PlotSettingsTab:
 
         self.app.file_listbox = tk.Listbox(
             listbox_frame, selectmode=tk.SINGLE, height=6, exportselection=False,
-            selectbackground="#1565C0", selectforeground="#FFFFFF", activestyle="none",
+            selectbackground="#00704A", selectforeground="#FFFFFF", activestyle="none",
         )
         self.app.file_listbox.grid(row=0, column=0, sticky="nsew")
         self.app.file_listbox.bind(

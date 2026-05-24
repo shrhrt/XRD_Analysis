@@ -1,4 +1,5 @@
 from tkinter import ttk
+from ui import style_manager
 
 
 class ExportTab:
@@ -50,9 +51,8 @@ class ExportTab:
             text="プレビュー",
             command=self.app.plot_handler.preview_figure,
         ).grid(row=0, column=0, sticky="ew", padx=(0, 2))
-        ttk.Button(
+        style_manager.primary_btn(
             button_frame,
             text="グラフを保存",
-            style="Primary.TButton",
             command=self.app.plot_handler.save_figure,
         ).grid(row=0, column=1, sticky="ew", padx=(2, 0))

@@ -1,6 +1,7 @@
 import math
 import tkinter as tk
 from tkinter import ttk
+from ui import style_manager
 
 
 class FitTab:
@@ -84,9 +85,9 @@ class FitTab:
         # --- ボタン・凡例 ---
         f3 = ttk.Frame(self.parent, padding=(5, 0, 5, 0))
         f3.grid(row=3, column=0, sticky="ew")
-        ttk.Button(f3, text="選択行を削除", style="Danger.TButton",
+        style_manager.danger_btn(f3, text="選択行を削除",
                    command=self._delete_selected).pack(side="left", padx=(0, 4))
-        ttk.Button(f3, text="全クリア", style="Danger.TButton",
+        style_manager.danger_btn(f3, text="全クリア",
                    command=self._clear_all).pack(side="left", padx=(0, 4))
         ttk.Button(f3, text="コピー", command=self._copy_to_clipboard).pack(side="left")
 
