@@ -240,6 +240,6 @@ class AppearanceTab:
 
         ttk.Label(
             ann_frame,
-            text="※ Enterキーで改行。位置はグラフ領域内の比率 (右上=1,1 左下=0,0)",
+            text="※ Shift+Enterで改行。位置はグラフ領域内の比率 (右上=1,1 左下=0,0)",
             foreground="gray", font=("", 8), wraplength=290, justify="left",
         ).grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 4))

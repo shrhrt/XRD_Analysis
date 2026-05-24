@@ -118,8 +118,7 @@ class SettingsHandler:
                     except Exception:
                         pass
         elif "export_format" in settings:  # 下位互換性のため
-            if "export_format" in settings:
-                self.model.export_format_var.set(settings["export_format"])
+            self.model.export_format_var.set(settings["export_format"])
             if "export_width" in settings:
                 self.model.export_width_var.set(settings["export_width"])
             if "export_height" in settings:

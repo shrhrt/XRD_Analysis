@@ -82,8 +82,6 @@ class AppStateModel:
         self.export_height_var = tk.StringVar(value="6")
         self.export_format_var = tk.StringVar(value="png")
 
-        self.selected_substance_var = tk.StringVar()
-
         # 保存対象の変数名リスト（動的に取得する設計）
         self.savable_vars = [
             attr

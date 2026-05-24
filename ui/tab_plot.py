@@ -162,7 +162,7 @@ class PlotSettingsTab:
             command=self.app.schedule_update,
         ).pack(side="left")
 
-        ttk.Label(graph_settings_frame, text="凡例名 (数式は$で囲む):").grid(
+        ttk.Label(graph_settings_frame, text="凡例名 (数式は$で囲む,\nファイル選択後に入力可):").grid(
             row=6, column=0, sticky="w", padx=5, pady=2
         )
         self.app.legend_name_entry = ttk.Entry(

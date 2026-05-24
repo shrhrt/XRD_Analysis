@@ -141,7 +141,7 @@ class ReferencePeaksTab:
         tk.Label(self.app.peak_frame, text="色").grid(row=0, column=4)
         tk.Label(self.app.peak_frame, text="線種").grid(row=0, column=5)
 
-        linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-. "}
+        linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-."}
         for i in range(10):
             tk.Label(self.app.peak_frame, text=f"#{i + 1}").grid(
                 row=i + 1, column=0, padx=(5, 2), pady=2, sticky="w"
