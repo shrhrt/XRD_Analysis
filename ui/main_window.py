@@ -19,6 +19,7 @@ from ui.handlers.settings_handler import SettingsHandler
 from ui.handlers.plot_handler import PlotHandler
 from ui.handlers.fit_handler import FitHandler
 from ui.tab_fit import FitTab
+from ui.theory_dialog import show_theory_dialog
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,13 @@ class MainWindow(ttk.Frame):
         self._view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="表示", menu=self._view_menu)
         self._view_menu.add_command(label="ダークモードに切り替え", command=self.toggle_theme)
+
+        help_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="ヘルプ", menu=help_menu)
+        help_menu.add_command(
+            label="理論・計算式の解説",
+            command=lambda: show_theory_dialog(self.master),
+        )
 
     def create_widgets(self):
         main_pane = tk.PanedWindow(
