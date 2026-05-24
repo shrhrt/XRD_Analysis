@@ -128,6 +128,7 @@ class FitHandler:
 
         result["color"] = color
         result["file"] = os.path.basename(fp)
+        result["legend"] = self.app.file_data.get(fp, os.path.basename(fp))
         self.fit_results.append(result)
         self.app.fit_tab.add_result(result)
         self.app.fit_tab.clear_error()
