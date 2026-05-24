@@ -1,4 +1,3 @@
-import tkinter as tk
 from tkinter import ttk
 
 
@@ -54,5 +53,6 @@ class ExportTab:
         ttk.Button(
             button_frame,
             text="グラフを保存",
+            style="Primary.TButton",
             command=self.app.plot_handler.save_figure,
         ).grid(row=0, column=1, sticky="ew", padx=(2, 0))

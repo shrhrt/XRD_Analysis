@@ -29,11 +29,13 @@ class PlotSettingsTab:
         ttk.Button(
             file_button_frame,
             text="ファイルを選択",
+            style="Primary.TButton",
             command=self.app.file_handler.select_files,
         ).grid(row=0, column=0, sticky="ew", padx=(0, 2))
         ttk.Button(
             file_button_frame,
             text="選択したファイルを削除",
+            style="Danger.TButton",
             command=self.app.file_handler.remove_selected_file,
         ).grid(row=0, column=1, sticky="ew", padx=(2, 0))
 
@@ -54,7 +56,8 @@ class PlotSettingsTab:
         listbox_frame.columnconfigure(0, weight=1)
 
         self.app.file_listbox = tk.Listbox(
-            listbox_frame, selectmode=tk.SINGLE, height=6, exportselection=False
+            listbox_frame, selectmode=tk.SINGLE, height=6, exportselection=False,
+            selectbackground="#1565C0", selectforeground="#FFFFFF", activestyle="none",
         )
         self.app.file_listbox.grid(row=0, column=0, sticky="nsew")
         self.app.file_listbox.bind(

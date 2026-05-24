@@ -4,6 +4,7 @@ import logging
 from tkinterdnd2 import TkinterDnD
 import sv_ttk
 from ui.main_window import MainWindow
+from ui import style_manager
 
 
 def _asset_path(relative_path):
@@ -33,6 +34,7 @@ def main():
 
     root = TkinterDnD.Tk()
     sv_ttk.set_theme("light")
+    style_manager.apply("light")
 
     icon_path = _asset_path(os.path.join("assets", "XRD_ANALYSIS_ICON.ico"))
     if os.path.exists(icon_path):

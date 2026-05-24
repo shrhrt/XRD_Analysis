@@ -20,6 +20,7 @@ from ui.handlers.plot_handler import PlotHandler
 from ui.handlers.fit_handler import FitHandler
 from ui.tab_fit import FitTab
 from ui.theory_dialog import show_theory_dialog
+from ui import style_manager
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +65,19 @@ class MainWindow(ttk.Frame):
     def toggle_theme(self):
         if sv_ttk.get_theme() == "dark":
             sv_ttk.set_theme("light")
+            style_manager.apply("light")
+            self._update_listbox_colors("light")
             self._view_menu.entryconfig(0, label="ダークモードに切り替え")
         else:
             sv_ttk.set_theme("dark")
+            style_manager.apply("dark")
+            self._update_listbox_colors("dark")
             self._view_menu.entryconfig(0, label="ライトモードに切り替え")
+
+    def _update_listbox_colors(self, mode: str):
+        colors = style_manager.listbox_colors(mode)
+        if hasattr(self, "file_listbox"):
+            self.file_listbox.config(**colors)
 
     def create_menu(self):
         self.menubar = tk.Menu(self.master)

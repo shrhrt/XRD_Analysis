@@ -77,9 +77,8 @@ class ReferencePeaksTab:
         ttk.Button(
             preset_frame, text="SpinFilter", command=self.load_spin_filter_preset
         ).pack(side="left", padx=(10, 0))
-        ttk.Button(preset_frame, text="クリア", command=self.clear_all_peaks).pack(
-            side="left", padx=(10, 0)
-        )
+        ttk.Button(preset_frame, text="クリア", style="Danger.TButton",
+                   command=self.clear_all_peaks).pack(side="left", padx=(10, 0))
 
         peak_opts_frame = tk.Frame(top_container)
         peak_opts_frame.pack(fill="x")
@@ -201,9 +200,10 @@ class ReferencePeaksTab:
             self.app.model.peak_style_vars.append(style_var)
             self.app.peak_style_combos.append(style_combo)
 
-            tk.Button(
+            ttk.Button(
                 self.app.peak_frame,
                 text="×",
+                style="Danger.TButton",
                 command=lambda idx=i: self.clear_peak_row(idx),
                 width=2,
             ).grid(row=i + 1, column=6, padx=(2, 5))
