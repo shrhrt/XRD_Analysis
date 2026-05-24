@@ -646,4 +646,17 @@ def draw_plot(
         ax, reference_peaks, ymax=ax.get_ylim()[1], appearance=appearance
     )
 
+    if appearance.get("annotation_visible", False):
+        ann_text = appearance.get("annotation_text", "")
+        if ann_text:
+            ax.text(
+                appearance.get("annotation_x", 0.72),
+                appearance.get("annotation_y", 0.95),
+                ann_text,
+                transform=ax.transAxes,
+                fontsize=appearance.get("annotation_fontsize", 12),
+                verticalalignment="top",
+                fontfamily=font_family,
+            )
+
     return None

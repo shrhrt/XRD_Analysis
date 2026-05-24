@@ -91,6 +91,11 @@ class PlotHandler:
             "legend_italic": self.model.legend_italic_var.get(),
             "yscale": self.model.yscale_var.get(),
             "font_family": self.model.font_family_var.get(),
+            "annotation_visible": self.model.annotation_visible_var.get(),
+            "annotation_text": self.model.annotation_text_var.get(),
+            "annotation_x": self.model.annotation_x_var.get(),
+            "annotation_y": self.model.annotation_y_var.get(),
+            "annotation_fontsize": self.model.annotation_fontsize_var.get(),
         }
 
         peak_detection_settings = {

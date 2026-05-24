@@ -70,6 +70,13 @@ class AppStateModel:
         self.peak_color_vars = []
         self.peak_style_vars = []
 
+        # --- テキストアノテーション ---
+        self.annotation_visible_var = tk.BooleanVar(value=False)
+        self.annotation_text_var = tk.StringVar(value="")
+        self.annotation_x_var = tk.DoubleVar(value=0.72)
+        self.annotation_y_var = tk.DoubleVar(value=0.95)
+        self.annotation_fontsize_var = tk.DoubleVar(value=12)
+
         # --- エクスポート関連 ---
         self.export_width_var = tk.StringVar(value="6")
         self.export_height_var = tk.StringVar(value="6")

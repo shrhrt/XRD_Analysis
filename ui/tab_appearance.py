@@ -10,6 +10,24 @@ class AppearanceTab:
         self.app = app
         self.build()
 
+    def _on_ann_text_change(self, event=None):
+        content = self._ann_text.get("1.0", "end-1c")
+        self._ann_updating = True
+        self.app.model.annotation_text_var.set(content)
+        self._ann_updating = False
+        self.app.schedule_update()
+
+    def _sync_ann_text_from_var(self, *_):
+        if self._ann_updating:
+            return
+        value = self.app.model.annotation_text_var.get()
+        current = self._ann_text.get("1.0", "end-1c")
+        if value != current:
+            self._ann_updating = True
+            self._ann_text.delete("1.0", "end")
+            self._ann_text.insert("1.0", value)
+            self._ann_updating = False
+
     def build(self):
         appearance_frame = ttk.Frame(self.parent, padding=(10, 10))
         appearance_frame.pack(fill="x")
@@ -158,3 +176,56 @@ class AppearanceTab:
             variable=self.app.model.match_math_font_var,
             command=self.app.schedule_update,
         ).grid(row=14, column=0, columnspan=2, sticky="w", pady=2)
+
+        # --- テキストアノテーション ---
+        ann_frame = ttk.LabelFrame(appearance_frame, text="テキストアノテーション")
+        ann_frame.grid(row=15, column=0, columnspan=2, sticky="ew", pady=(10, 2))
+        ann_frame.columnconfigure(1, weight=1)
+
+        ttk.Checkbutton(
+            ann_frame,
+            text="表示する",
+            variable=self.app.model.annotation_visible_var,
+            command=self.app.schedule_update,
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+
+        ttk.Label(ann_frame, text="テキスト:").grid(row=1, column=0, sticky="nw", padx=5, pady=2)
+        self._ann_text = tk.Text(ann_frame, height=3, width=22, wrap="none", relief="solid", borderwidth=1)
+        self._ann_text.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        self._ann_text.insert("1.0", self.app.model.annotation_text_var.get())
+        self._ann_updating = False
+        self._ann_text.bind("<KeyRelease>", self._on_ann_text_change)
+        self._ann_text.bind("<FocusOut>", self._on_ann_text_change)
+        self.app.model.annotation_text_var.trace_add("write", self._sync_ann_text_from_var)
+
+        ttk.Label(ann_frame, text="X位置 (0〜1):").grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        ttk.Spinbox(
+            ann_frame,
+            textvariable=self.app.model.annotation_x_var,
+            from_=0.0, to=1.0, increment=0.05,
+            format="%.2f",
+            command=self.app.schedule_update,
+        ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+
+        ttk.Label(ann_frame, text="Y位置 (0〜1):").grid(row=3, column=0, sticky="w", padx=5, pady=2)
+        ttk.Spinbox(
+            ann_frame,
+            textvariable=self.app.model.annotation_y_var,
+            from_=0.0, to=1.0, increment=0.05,
+            format="%.2f",
+            command=self.app.schedule_update,
+        ).grid(row=3, column=1, sticky="ew", padx=5, pady=2)
+
+        ttk.Label(ann_frame, text="フォントサイズ:").grid(row=4, column=0, sticky="w", padx=5, pady=2)
+        ttk.Spinbox(
+            ann_frame,
+            textvariable=self.app.model.annotation_fontsize_var,
+            from_=6, to=60, increment=1,
+            command=self.app.schedule_update,
+        ).grid(row=4, column=1, sticky="ew", padx=5, pady=2)
+
+        ttk.Label(
+            ann_frame,
+            text="※ Enterキーで改行。位置はグラフ領域内の比率 (右上=1,1 左下=0,0)",
+            foreground="gray", font=("", 8), wraplength=290, justify="left",
+        ).grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 4))
