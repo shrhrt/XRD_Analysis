@@ -189,7 +189,7 @@ class FitTab:
 
         rel_sym, tag = self._reliability(result)
         legend = result.get("legend", result.get("file", ""))
-        display = legend[:10] + "…" if len(legend) > 11 else legend
+        display = legend[:10] + "…" if len(legend) > 10 else legend
 
         row = (
             display,
