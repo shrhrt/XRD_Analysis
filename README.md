@@ -1,6 +1,10 @@
 <div align="center">
-  <h1>XRD Data Plotter</h1>
+  <h1><img src="assets/XRD_ANALYSIS_ICON.ico" width="60" alt="App Icon" style="vertical-align: middle; margin-right: 10px;"> XRD Data Plotter</h1>
   <p>X線回折データの可視化・解析のためのデスクトップGUIアプリケーション</p>
+  <img src="https://img.shields.io/badge/Python-3.12+-blue?logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows" alt="Platform">
+  <img src="https://img.shields.io/badge/GUI-Tkinter%20%2F%20sv--ttk-green" alt="GUI">
+  <img src="https://img.shields.io/badge/Plot-Matplotlib-orange?logo=plotly" alt="Matplotlib">
 </div>
 
 ---
