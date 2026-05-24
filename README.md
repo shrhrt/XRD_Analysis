@@ -136,16 +136,16 @@
 
 ### 使用技術と選定理由
 
-| カテゴリ | ライブラリ / ツール | バージョン | 選定理由 |
-| :--- | :--- | :--- | :--- |
-| 言語 | Python | 3.12+ | 科学計算ライブラリの充実さと、PyInstallerによる単体exe配布の容易さ |
-| GUI | Tkinter / ttk | 標準 | Python標準ライブラリ。追加依存ゼロで `.exe` 配布が可能 |
-| テーマ | sv_ttk | 2.6.1 | Windows 11にネイティブに馴染む、フラットなモダンデザイン |
-| D&D | tkinterdnd2 | — | Tkinterが標準で持たないドラッグ＆ドロップ機能を補完 |
-| グラフ描画 | Matplotlib | — | 論文品質のSVG/PDF出力・TeX記法サポート |
-| 数値計算 | NumPy | — | 測定データの高速ベクトル演算 |
-| ピークフィット | SciPy | — | `curve_fit`（Gaussianフィット）と `find_peaks`（ピーク検出）を使用 |
-| パッケージング | PyInstaller | — | 単体の `.exe` に固めてPython環境のないPCでも動作させるため |
+| カテゴリ | 使用技術 | 選定理由 |
+| :--- | :--- | :--- |
+| **開発言語** | Python 3.12+ | 科学計算ライブラリの充実さと、PyInstallerによる単体exe配布の容易さ |
+| **GUIフレームワーク** | Tkinter / ttk | Python標準ライブラリ。外部依存ゼロで `.exe` 配布が可能 |
+| **GUIテーマ** | sv_ttk 2.6.1 | Windows 11にネイティブに馴染む、フラットなモダンデザイン |
+| **D&Dサポート** | tkinterdnd2 | Tkinterが標準で持たないドラッグ＆ドロップ機能を補完 |
+| **データ可視化** | Matplotlib | 論文品質のSVG/PDF出力・TeX記法サポート |
+| **数値計算** | NumPy | 測定データの高速ベクトル演算 |
+| **ピークフィット** | SciPy | `curve_fit`（Gaussianフィット）と `find_peaks`（ピーク検出）を使用 |
+| **パッケージング** | PyInstaller | 単体の `.exe` に固めてPython環境のないPCでも動作させるため |
 
 ---
 
