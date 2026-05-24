@@ -1,12 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 datas = [('assets/XRD_ANALYSIS_ICON.ico', 'assets')]
 binaries = []
 hiddenimports = ['tkinterdnd2']
-tmp_ret = collect_all('sv_ttk')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
+for pkg in ('sv_ttk', 'scipy', 'matplotlib'):
+    tmp = collect_all(pkg)
+    datas     += tmp[0]
+    binaries  += tmp[1]
+    hiddenimports += tmp[2]
+
+hiddenimports += collect_submodules('scipy')
+hiddenimports += collect_submodules('matplotlib')
 
 a = Analysis(
     ['main.py'],

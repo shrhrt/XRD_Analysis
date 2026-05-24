@@ -5,6 +5,10 @@
   <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows" alt="Platform">
   <img src="https://img.shields.io/badge/GUI-Tkinter%20%2F%20sv--ttk-green" alt="GUI">
   <img src="https://img.shields.io/badge/Plot-Matplotlib-orange" alt="Matplotlib">
+  <br><br>
+  <a href="https://github.com/shrhrt/XRD_Analysis/releases/latest">
+    <img src="https://img.shields.io/github/v/release/shrhrt/XRD_Analysis?label=Download&color=brightgreen&logo=github" alt="Download">
+  </a>
 </div>
 
 ## 目次
@@ -205,26 +209,30 @@ sv_ttk はボタン背景色をTCLエレメントレベルで上書きするた�
 
 **動作環境: Windows 10 / 11**
 
-**ステップ 1 — 起動**
+**ステップ 1 — ダウンロード**
 
-配布された実行ファイル（`XRD解析プログラム.exe`）をダブルクリック。
+GitHubの [Releases ページ](https://github.com/shrhrt/XRD_Analysis/releases) から最新の ZIP をダウンロードして解凍する。
+
+**ステップ 2 — 起動**
+
+解凍したフォルダ内の `XRD解析プログラム.exe` をダブルクリック。
 
 > **SmartScreen 警告が表示された場合**
 > 「詳細情報」→「実行」の順に選択すると起動できる。初回のみ表示される。
 
-**ステップ 2 — データを読み込む**
+**ステップ 3 — データを読み込む**
 
 `.ras` ファイルをウィンドウにドラッグ＆ドロップするとグラフが即座に描画される。
 
-**ステップ 3 — 参照ピークを重ねる**
+**ステップ 4 — 参照ピークを重ねる**
 
 「参照ピーク」タブ → 「物質を選択...」メニューから物質名を選ぶと、ピーク位置が自動でグラフに重畳される。
 
-**ステップ 4 — ピークをフィットする**
+**ステップ 5 — ピークをフィットする**
 
 「ピークフィット」タブ → 「フィットモード: ON」→ グラフ上でピーク範囲をドラッグ選択。
 
-**ステップ 5 — グラフを保存する**
+**ステップ 6 — グラフを保存する**
 
 「エクスポート」タブ → サイズ・形式を指定して「グラフを保存」。
 
@@ -236,7 +244,7 @@ sv_ttk はボタン背景色をTCLエレメントレベルで上書きするた�
 
 ```bat
 :: リポジトリのクローン
-git clone https://github.com/yourusername/XRD_Analysis.git
+git clone https://github.com/shrhrt/XRD_Analysis.git
 cd XRD_Analysis
 
 :: 仮想環境の作成・有効化
