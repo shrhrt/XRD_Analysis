@@ -7,6 +7,7 @@ import math
 from typing import List, Tuple, Dict, Optional, Any
 from dataclasses import dataclass, field
 from scipy.signal import find_peaks
+from scipy.optimize import curve_fit
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,109 @@ def calculate_lattice_constant(d: float, h: int, k: int, l: int) -> float:
     if d <= 0:
         raise ValueError("d値は正の数である必要があります。")
     return d * math.sqrt(h**2 + k**2 + l**2)
+
+
+def _gaussian_with_bg(x, A, x0, sigma, a, b):
+    """Gaussian + 線形バックグラウンド"""
+    return A * np.exp(-((x - x0) ** 2) / (2.0 * sigma ** 2)) + a * x + b
+
+
+def fit_peak_gaussian(
+    angles: np.ndarray,
+    intensities: np.ndarray,
+    angle_min: float,
+    angle_max: float,
+) -> Dict[str, Any]:
+    """
+    指定範囲に Gaussian + 線形バックグラウンドをフィット。
+
+    Returns:
+        center, center_err, fwhm, fwhm_err, d_spacing,
+        crystallite_size, crystallite_size_err, r_squared, x_fit, y_fit
+    Raises:
+        ValueError: データ不足またはフィット失敗時
+    """
+    mask = (
+        (angles >= angle_min)
+        & (angles <= angle_max)
+        & np.isfinite(intensities)
+        & (intensities > 0)
+    )
+    x = angles[mask]
+    y = intensities[mask]
+
+    if len(x) < 5:
+        raise ValueError(f"範囲内のデータ点が {len(x)} 点しかありません（5点以上必要）")
+
+    peak_idx = int(np.argmax(y))
+    x0_init = float(x[peak_idx])
+    A_init = max(float(y[peak_idx] - np.min(y)), float(y[peak_idx]) * 0.1)
+    sigma_init = (angle_max - angle_min) / 4.0
+    span = float(x[-1] - x[0])
+    a_init = float((y[-1] - y[0]) / span) if span > 0 else 0.0
+    b_init = float(y[0] - a_init * x[0])
+
+    p0 = [A_init, x0_init, sigma_init, a_init, b_init]
+    bounds = (
+        [0.0, angle_min, 1e-6, -np.inf, -np.inf],
+        [np.inf, angle_max, angle_max - angle_min, np.inf, np.inf],
+    )
+
+    try:
+        popt, pcov = curve_fit(
+            _gaussian_with_bg, x, y, p0=p0, bounds=bounds, maxfev=10000
+        )
+    except RuntimeError:
+        raise ValueError("フィットが収束しませんでした。範囲を変えてみてください。")
+    except ValueError as exc:
+        raise ValueError(f"フィットエラー: {exc}") from exc
+
+    perr = np.sqrt(np.diag(pcov))
+    _, x0, sigma, _, _ = popt
+    fwhm = 2.3548195 * abs(sigma)
+    fwhm_err = 2.3548195 * float(perr[2])
+
+    y_pred = _gaussian_with_bg(x, *popt)
+    ss_res = float(np.sum((y - y_pred) ** 2))
+    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+    r_squared = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+
+    d_val = calculate_d_value(float(x0))
+    D = scherrer(fwhm, float(x0))
+    D_err = D * (fwhm_err / fwhm) if math.isfinite(D) and fwhm > 0 else float("nan")
+
+    x_dense = np.linspace(angle_min, angle_max, 300)
+    y_dense = _gaussian_with_bg(x_dense, *popt)
+
+    return {
+        "center": float(x0),
+        "center_err": float(perr[1]),
+        "fwhm": fwhm,
+        "fwhm_err": fwhm_err,
+        "d_spacing": d_val,
+        "crystallite_size": D,
+        "crystallite_size_err": D_err,
+        "r_squared": r_squared,
+        "x_fit": x_dense,
+        "y_fit": y_dense,
+    }
+
+
+def scherrer(
+    fwhm_deg: float,
+    two_theta_deg: float,
+    K: float = 0.94,
+    wavelength: float = 1.78897,
+) -> float:
+    """シェラー式: D = K·λ / (β·cosθ)  [単位: Å]"""
+    if fwhm_deg <= 0:
+        return float("nan")
+    beta_rad = math.radians(fwhm_deg)
+    theta_rad = math.radians(two_theta_deg / 2.0)
+    cos_theta = math.cos(theta_rad)
+    if cos_theta <= 0:
+        return float("nan")
+    return (K * wavelength) / (beta_rad * cos_theta)
 
 
 def _detect_peaks(

@@ -17,6 +17,8 @@ from ui.tab_export import ExportTab
 from ui.handlers.file_handler import FileHandler
 from ui.handlers.settings_handler import SettingsHandler
 from ui.handlers.plot_handler import PlotHandler
+from ui.handlers.fit_handler import FitHandler
+from ui.tab_fit import FitTab
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,7 @@ class MainWindow(ttk.Frame):
         self.file_handler = FileHandler(self, self.model)
         self.settings_handler = SettingsHandler(self, self.model)
         self.plot_handler = PlotHandler(self, self.model)
+        self.fit_handler = FitHandler(self, self.model)
 
         self.create_menu()
         self.create_widgets()
@@ -111,8 +114,10 @@ class MainWindow(ttk.Frame):
             reference_peaks_tab,
             appearance_tab,
             analysis_tab,
+            fit_tab,
             export_tab,
         ) = (
+            ttk.Frame(notebook),
             ttk.Frame(notebook),
             ttk.Frame(notebook),
             ttk.Frame(notebook),
@@ -123,12 +128,14 @@ class MainWindow(ttk.Frame):
         notebook.add(reference_peaks_tab, text="参照ピーク")
         notebook.add(appearance_tab, text="外観設定")
         notebook.add(analysis_tab, text="解析ツール")
+        notebook.add(fit_tab, text="ピークフィット")
         notebook.add(export_tab, text="エクスポート")
 
         PlotSettingsTab(plot_settings_tab, self)
         ReferencePeaksTab(reference_peaks_tab, self)
         AppearanceTab(appearance_tab, self)
         AnalysisTab(analysis_tab, self)
+        self.fit_tab = FitTab(fit_tab, self)
         ExportTab(export_tab, self)
 
         # 全モデル変数への一括トレース: Spinbox手入力・Entry入力をリアルタイムに反映する。
@@ -143,8 +150,8 @@ class MainWindow(ttk.Frame):
         main_pane.add(plot_panel, stretch="always")
         self.canvas = FigureCanvasTkAgg(self.fig, master=plot_panel)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        toolbar = NavigationToolbar2Tk(self.canvas, plot_panel)
-        toolbar.update()
+        self.toolbar = NavigationToolbar2Tk(self.canvas, plot_panel)
+        self.toolbar.update()
 
         # ドラッグ＆ドロップの登録
         self.file_listbox.drop_target_register(DND_FILES)

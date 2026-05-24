@@ -161,6 +161,9 @@ class PlotHandler:
             )
             if error_message:
                 messagebox.showinfo("情報", error_message, parent=self.app.master)
+            # フィット曲線を ax.clear() 後に再描画（canvas.draw より前）
+            if hasattr(self.app, "fit_handler"):
+                self.app.fit_handler.redraw_fits()
             self.app.fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15)
             self.app.canvas.draw()
 
