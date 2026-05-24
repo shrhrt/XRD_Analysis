@@ -38,6 +38,7 @@ def main():
     if os.path.exists(icon_path):
         root.iconbitmap(icon_path)
 
+    root.state("zoomed")
     app = MainWindow(master=root)
     app.mainloop()
 
