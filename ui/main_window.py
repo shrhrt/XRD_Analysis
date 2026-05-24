@@ -96,6 +96,13 @@ class MainWindow(ttk.Frame):
         self._view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="表示", menu=self._view_menu)
         self._view_menu.add_command(label="ダークモードに切り替え", command=self.toggle_theme)
+        self._view_menu.add_separator()
+        self._restore_var = tk.BooleanVar(value=self.settings_handler.get_restore_on_startup())
+        self._view_menu.add_checkbutton(
+            label="起動時に前回のセッションを復元する",
+            variable=self._restore_var,
+            command=lambda: self.settings_handler.set_restore_on_startup(self._restore_var.get()),
+        )
 
         help_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="ヘルプ", menu=help_menu)

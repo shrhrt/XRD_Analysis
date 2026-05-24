@@ -1,4 +1,5 @@
 import os
+import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from core.config_manager import ConfigManager
@@ -11,6 +12,35 @@ class SettingsHandler:
     def __init__(self, app, model):
         self.app = app
         self.model = model
+
+    # ------------------------------------------------------------------ #
+    # 起動設定（preferences.json）
+    # ------------------------------------------------------------------ #
+
+    def _prefs_path(self) -> str:
+        return os.path.join(os.path.dirname(self.app.config_file), "preferences.json")
+
+    def _load_prefs(self) -> dict:
+        try:
+            with open(self._prefs_path(), "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _save_prefs(self, prefs: dict):
+        try:
+            with open(self._prefs_path(), "w", encoding="utf-8") as f:
+                json.dump(prefs, f, indent=2)
+        except Exception:
+            pass
+
+    def get_restore_on_startup(self) -> bool:
+        return self._load_prefs().get("restore_on_startup", True)
+
+    def set_restore_on_startup(self, value: bool):
+        prefs = self._load_prefs()
+        prefs["restore_on_startup"] = value
+        self._save_prefs(prefs)
 
     def build_config_dict(self, include_recent=False) -> dict:
         """現在のUIの入力状態から設定辞書を構築する。"""
@@ -159,7 +189,9 @@ class SettingsHandler:
         messagebox.showinfo("成功", "設定を読み込んだ。", parent=self.app.master)
 
     def load_app_config(self):
-        """起動時のアプリケーション設定を読み込む。"""
+        """起動時のアプリケーション設定を読み込む。preferences で無効化されていればスキップ。"""
+        if not self.get_restore_on_startup():
+            return
         settings = ConfigManager.load_from_file(self.app.config_file)
         if settings:
             self.apply_config_dict(settings, is_app_config=True)
