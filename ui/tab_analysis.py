@@ -93,37 +93,102 @@ class AnalysisTab:
             variable=self.app.model.peak_detection_enabled_var,
             command=self.app.schedule_update,
         ).grid(row=0, column=0, columnspan=2, sticky="w", padx=5)
-        ttk.Label(peak_frame, text="最小高さ:").grid(
+
+        # 基板除外スライダー（最大値の何%以上を基板とみなすか）
+        ttk.Label(peak_frame, text="基板除外 (最大値の %):").grid(
             row=1, column=0, sticky="w", padx=5, pady=2
+        )
+        trim_frame = ttk.Frame(peak_frame)
+        trim_frame.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        trim_frame.columnconfigure(0, weight=1)
+        ttk.Scale(
+            trim_frame,
+            variable=self.app.model.peak_detection_trim_top_var,
+            from_=0,
+            to=10,
+            orient="horizontal",
+            command=lambda _: self.app.schedule_update(),
+        ).grid(row=0, column=0, sticky="ew")
+        trim_val_label = ttk.Label(trim_frame, text="0% (無効)", width=9)
+        trim_val_label.grid(row=0, column=1, padx=(4, 0))
+
+        def _update_trim_label(*_):
+            v = self.app.model.peak_detection_trim_top_var.get()
+            if v <= 0:
+                trim_val_label.config(text="0% (無効)")
+            else:
+                trim_val_label.config(text=f"{v:.1f}%")
+
+        self.app.model.peak_detection_trim_top_var.trace_add("write", _update_trim_label)
+
+        ttk.Label(peak_frame, text="最小高さ (参照値の %):").grid(
+            row=2, column=0, sticky="w", padx=5, pady=2
         )
         ttk.Spinbox(
             peak_frame,
             textvariable=self.app.model.peak_detection_height_var,
             from_=0,
-            to=1e9,
-            increment=10,
+            to=5,
+            increment=0.5,
             command=self.app.schedule_update,
-        ).grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-        ttk.Label(peak_frame, text="最小プロミネンス:").grid(
-            row=2, column=0, sticky="w", padx=5, pady=2
+        ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        ttk.Label(peak_frame, text="最小プロミネンス (参照値の %):").grid(
+            row=3, column=0, sticky="w", padx=5, pady=2
         )
         ttk.Spinbox(
             peak_frame,
             textvariable=self.app.model.peak_detection_prominence_var,
             from_=0,
-            to=1e9,
-            increment=10,
+            to=5,
+            increment=0.5,
             command=self.app.schedule_update,
-        ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
-        ttk.Label(peak_frame, text="最小幅:").grid(
-            row=3, column=0, sticky="w", padx=5, pady=2
+        ).grid(row=3, column=1, sticky="ew", padx=5, pady=2)
+        ttk.Label(peak_frame, text="最小幅 (degree):").grid(
+            row=4, column=0, sticky="w", padx=5, pady=2
         )
         ttk.Spinbox(
             peak_frame,
             textvariable=self.app.model.peak_detection_width_var,
-            from_=0,
+            from_=0.01,
+            to=0.1,
+            increment=0.01,
+            command=self.app.schedule_update,
+        ).grid(row=4, column=1, sticky="ew", padx=5, pady=2)
+
+        # Substrate peak detection
+        substrate_frame = ttk.LabelFrame(analysis_frame, text="基板ピーク検出 (赤)")
+        substrate_frame.grid(row=3, column=0, sticky="ew", pady=5)
+        substrate_frame.columnconfigure(1, weight=1)
+        ttk.Label(
+            substrate_frame,
+            text="全データ最大値を基準に強いピークを検出します",
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=5)
+        ttk.Checkbutton(
+            substrate_frame,
+            text="有効化",
+            variable=self.app.model.substrate_peak_detection_enabled_var,
+            command=self.app.schedule_update,
+        ).grid(row=1, column=0, columnspan=2, sticky="w", padx=5)
+        ttk.Label(substrate_frame, text="最小高さ (最大値の %):").grid(
+            row=2, column=0, sticky="w", padx=5, pady=2
+        )
+        ttk.Spinbox(
+            substrate_frame,
+            textvariable=self.app.model.substrate_peak_detection_height_var,
+            from_=1,
             to=100,
-            increment=0.5,
+            increment=1,
+            command=self.app.schedule_update,
+        ).grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+        ttk.Label(substrate_frame, text="最小幅 (degree):").grid(
+            row=3, column=0, sticky="w", padx=5, pady=2
+        )
+        ttk.Spinbox(
+            substrate_frame,
+            textvariable=self.app.model.substrate_peak_detection_width_var,
+            from_=0.01,
+            to=10,
+            increment=0.05,
             command=self.app.schedule_update,
         ).grid(row=3, column=1, sticky="ew", padx=5, pady=2)
 

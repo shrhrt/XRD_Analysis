@@ -50,9 +50,14 @@ class AppStateModel:
         self.lc_result_var = tk.StringVar(value="a = ?")
 
         self.peak_detection_enabled_var = tk.BooleanVar(value=False)
-        self.peak_detection_height_var = tk.DoubleVar(value=10)
-        self.peak_detection_prominence_var = tk.DoubleVar(value=10)
-        self.peak_detection_width_var = tk.DoubleVar(value=1.0)
+        self.peak_detection_trim_top_var = tk.DoubleVar(value=1.0)    # 基板除外閾値 (最大値の %) — 0=無効
+        self.peak_detection_height_var = tk.DoubleVar(value=1.0)      # 基板除外後の最大値の %
+        self.peak_detection_prominence_var = tk.DoubleVar(value=2.0)  # 基板除外後の最大値の %
+        self.peak_detection_width_var = tk.DoubleVar(value=0.06)      # degree
+
+        self.substrate_peak_detection_enabled_var = tk.BooleanVar(value=False)
+        self.substrate_peak_detection_height_var = tk.DoubleVar(value=20.0)  # 最大値の %
+        self.substrate_peak_detection_width_var = tk.DoubleVar(value=0.05)   # degree
 
         # --- 参照ピーク関連 ---
         self.peak_label_fontsize_var = tk.DoubleVar(value=9)

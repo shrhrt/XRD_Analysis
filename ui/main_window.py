@@ -134,6 +134,14 @@ class MainWindow(ttk.Frame):
         AnalysisTab(analysis_tab, self)
         ExportTab(export_tab, self)
 
+        # 全モデル変数への一括トレース: Spinbox手入力・Entry入力をリアルタイムに反映する。
+        # command= コールバックはSpinboxのボタン操作時しか発火しないため、
+        # 変数自体の書き換えを監視することで手入力も拾う。
+        for var_name in self.model.savable_vars:
+            var = getattr(self.model, var_name)
+            if isinstance(var, tk.Variable):
+                var.trace_add("write", self.schedule_update)
+
         plot_panel = ttk.Frame(main_pane)
         main_pane.add(plot_panel, stretch="always")
         self.canvas = FigureCanvasTkAgg(self.fig, master=plot_panel)

@@ -71,6 +71,131 @@ def calculate_lattice_constant(d: float, h: int, k: int, l: int) -> float:
     return d * math.sqrt(h**2 + k**2 + l**2)
 
 
+def _detect_peaks(
+    angles: np.ndarray,
+    intensities: np.ndarray,
+    settings: Dict[str, Any],
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    ピーク検出を行い、検出されたピークの角度と強度を返す。
+    入力データは変更しない。NaN/Inf を含むデータにも対応。
+
+    height/prominence は最大強度に対する割合(%)で指定する。
+    width は角度(degree)単位で指定する。
+
+    Returns:
+        (peak_angles, peak_intensities): 空配列は「ピークなし」を意味する。
+    """
+    if not settings.get("enabled", False):
+        return np.array([]), np.array([])
+
+    # NaN/Inf を除去した有効データのみを対象にする
+    valid = np.isfinite(intensities)
+    clean_angles = angles[valid]
+    clean_intensities = intensities[valid]
+
+    if clean_intensities.size < 3:
+        return np.array([]), np.array([])
+
+    # 基板除外: 最大値の trim_top_pct% 以上を基板領域とみなし除外する。
+    # 0 のとき除外なし（全データ対象）。
+    trim_top_pct = settings.get("trim_top_pct", 0.0)
+    if trim_top_pct > 0:
+        global_max = float(np.max(clean_intensities))
+        substrate_threshold = (trim_top_pct / 100.0) * global_max
+        film_mask = clean_intensities <= substrate_threshold
+    else:
+        film_mask = np.ones(len(clean_intensities), dtype=bool)
+
+    film_intensities = clean_intensities[film_mask]
+    if film_intensities.size < 3:
+        return np.array([]), np.array([])
+
+    data_max = float(np.max(film_intensities))
+    if data_max <= 0:
+        return np.array([]), np.array([])
+
+    # height/prominence: 基板除外後の最大値に対する % → 絶対値に変換
+    effective_height = (settings.get("min_height", 0.0) / 100.0) * data_max
+    effective_prominence = (settings.get("min_prominence", 0.0) / 100.0) * data_max
+
+    # width: 角度(degree) → データポイント数に変換（元のステップを使用）
+    step = float(np.median(np.diff(clean_angles))) if clean_angles.size >= 2 else 1.0
+    min_width_deg = settings.get("min_width", 0.0)
+    effective_width = max(1.0, min_width_deg / step) if step > 0 else 1.0
+
+    # 基板除外で生じたギャップで連続セグメントに分割して find_peaks を実行する。
+    # セグメントの端点は両隣データがないため局所最大値と判定されず、
+    # 基板裾のショルダー点が誤検出されなくなる。
+    film_indices = np.where(film_mask)[0]
+    gaps = np.where(np.diff(film_indices) > 1)[0] + 1
+    segments = np.split(film_indices, gaps)
+
+    all_peak_angles: list = []
+    all_peak_heights: list = []
+    for seg_idx in segments:
+        if seg_idx.size < 3:
+            continue
+        seg_int = clean_intensities[seg_idx]
+        peaks, props = find_peaks(
+            seg_int,
+            height=effective_height,
+            prominence=effective_prominence,
+            width=effective_width,
+        )
+        if peaks.size > 0:
+            all_peak_angles.extend(clean_angles[seg_idx[peaks]])
+            all_peak_heights.extend(props["peak_heights"])
+
+    if not all_peak_angles:
+        return np.array([]), np.array([])
+    return np.array(all_peak_angles), np.array(all_peak_heights)
+
+
+def _detect_substrate_peaks(
+    angles: np.ndarray,
+    intensities: np.ndarray,
+    settings: Dict[str, Any],
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    基板ピーク（グローバル最大値基準で支配的に強いピーク）を検出する。
+    _detect_peaks とは異なりグローバル最大値を参照値に使うため、
+    薄膜ピークよりはるかに強い基板ピークを選別できる。
+
+    height は全データ最大値に対する % で指定する。
+    """
+    if not settings.get("enabled", False):
+        return np.array([]), np.array([])
+
+    valid = np.isfinite(intensities)
+    clean_angles = angles[valid]
+    clean_intensities = intensities[valid]
+
+    if clean_intensities.size < 3:
+        return np.array([]), np.array([])
+
+    data_max = float(np.max(clean_intensities))
+    if data_max <= 0:
+        return np.array([]), np.array([])
+
+    effective_height = (settings.get("min_height", 0.0) / 100.0) * data_max
+
+    step = float(np.median(np.diff(clean_angles))) if clean_angles.size >= 2 else 1.0
+    min_width_deg = settings.get("min_width", 0.0)
+    effective_width = max(1.0, min_width_deg / step) if step > 0 else 1.0
+
+    peaks, properties = find_peaks(
+        clean_intensities,
+        height=effective_height,
+        width=effective_width,
+    )
+
+    if peaks.size == 0:
+        return np.array([]), np.array([])
+
+    return clean_angles[peaks], properties["peak_heights"]
+
+
 def _find_and_draw_peaks(
     ax: plt.Axes,
     angles: np.ndarray,
@@ -78,43 +203,43 @@ def _find_and_draw_peaks(
     ymax: float,
     settings: Dict[str, Any],
 ):
-    """
-    データからピークを検出し、プロット上にテキストとして表示。
+    """検出されたピークをプロット上にテキストとして描画する。"""
+    peak_angles, peak_intensities = _detect_peaks(angles, intensities, settings)
 
-    Args:
-        ax (plt.Axes): 描画先のMatplotlib Axesオブジェクト
-        angles (np.ndarray): X軸データ（角度）
-        intensities (np.ndarray): Y軸データ（強度）
-        ymax (float): Y軸の最大値（現在未使用ですが将来の拡張用に保持）
-        settings (Dict[str, Any]): ピーク検出の閾値設定
-    """
-    if not settings.get("enabled", False):
-        return
+    for angle, intensity in zip(peak_angles, peak_intensities):
+        ax.text(
+            angle,
+            intensity,
+            f"{angle:.1f}°",
+            verticalalignment="bottom",
+            horizontalalignment="center",
+            color="purple",
+            fontsize=8,
+            fontweight="bold",
+        )
 
-    min_height = settings.get("min_height", 0)
-    min_prominence = settings.get("min_prominence", 0)
-    min_width = settings.get("min_width", 0)
 
-    # ピーク検出
-    peaks, properties = find_peaks(
-        intensities, height=min_height, prominence=min_prominence, width=min_width
-    )
+def _find_and_draw_substrate_peaks(
+    ax: plt.Axes,
+    angles: np.ndarray,
+    intensities: np.ndarray,
+    ymax: float,
+    settings: Dict[str, Any],
+):
+    """検出された基板ピークをプロット上に赤テキストで描画する。"""
+    peak_angles, peak_intensities = _detect_substrate_peaks(angles, intensities, settings)
 
-    if peaks.size > 0:
-        peak_angles = angles[peaks]
-        peak_intensities = properties["peak_heights"]
-        for angle, intensity in zip(peak_angles, peak_intensities):
-            # ピーク位置にテキストを追加
-            ax.text(
-                angle,
-                intensity,
-                f"{angle:.1f}°",
-                verticalalignment="bottom",
-                horizontalalignment="center",
-                color="purple",
-                fontsize=8,
-                fontweight="bold",
-            )
+    for angle, intensity in zip(peak_angles, peak_intensities):
+        ax.text(
+            angle,
+            intensity,
+            f"Sub:{angle:.1f}°",
+            verticalalignment="bottom",
+            horizontalalignment="center",
+            color="red",
+            fontsize=8,
+            fontweight="bold",
+        )
 
 
 def _draw_reference_peaks(
@@ -174,6 +299,7 @@ class PlotSettings:
     appearance: Dict[str, Any]
     reference_peaks: List[Dict[str, Any]] = field(default_factory=list)
     peak_detection_settings: Optional[Dict[str, Any]] = None
+    substrate_peak_detection_settings: Optional[Dict[str, Any]] = None
     legend_position: Optional[Tuple[float, float]] = None
 
 
@@ -191,6 +317,7 @@ def draw_plot(
     spacing = settings.spacing
     appearance = settings.appearance
     peak_detection_settings = settings.peak_detection_settings
+    substrate_peak_detection_settings = settings.substrate_peak_detection_settings
     legend_position = settings.legend_position
 
     ax.clear()
@@ -272,7 +399,7 @@ def draw_plot(
     # ステップ3: データをプロットする。この際に閾値処理を適用する
     for idx, item in enumerate(processed_data):
         angles = item["angles"]
-        intensities_np = item["intensities"]
+        intensities_np = item["intensities"].copy()  # 元データを破壊しないようコピー
 
         if threshold_handling == "hide":
             intensities_np[(intensities_np < threshold) | (intensities_np <= 0)] = (
@@ -300,19 +427,26 @@ def draw_plot(
                 ax, angles, intensities_np, ymax_val, peak_detection_settings
             )
 
+        if (
+            substrate_peak_detection_settings
+            and substrate_peak_detection_settings.get("enabled", False)
+            and not stack
+        ):
+            _find_and_draw_substrate_peaks(
+                ax, angles, intensities_np, ymax_val, substrate_peak_detection_settings
+            )
+
         if stack:
             current_multiplier = current_multiplier_factor**idx
             intensities_np = intensities_np * current_multiplier
-            if peak_detection_settings and peak_detection_settings.get(
-                "enabled", False
-            ):
-                # スタック表示の場合、スケーリング後の強度でピーク検出
-                scaled_settings = peak_detection_settings.copy()
-                scaled_settings["min_height"] = (
-                    scaled_settings.get("min_height", 0) * current_multiplier
-                )
+            if peak_detection_settings and peak_detection_settings.get("enabled", False):
+                # スケーリング後の強度を渡す。height/prominence は内部で最大値基準の%に変換される
                 _find_and_draw_peaks(
-                    ax, angles, intensities_np, ymax_val, scaled_settings
+                    ax, angles, intensities_np, ymax_val, peak_detection_settings
+                )
+            if substrate_peak_detection_settings and substrate_peak_detection_settings.get("enabled", False):
+                _find_and_draw_substrate_peaks(
+                    ax, angles, intensities_np, ymax_val, substrate_peak_detection_settings
                 )
 
         ax.plot(

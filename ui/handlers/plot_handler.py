@@ -95,9 +95,16 @@ class PlotHandler:
 
         peak_detection_settings = {
             "enabled": self.model.peak_detection_enabled_var.get(),
+            "trim_top_pct": self.model.peak_detection_trim_top_var.get(),
             "min_height": self.model.peak_detection_height_var.get(),
             "min_prominence": self.model.peak_detection_prominence_var.get(),
             "min_width": self.model.peak_detection_width_var.get(),
+        }
+
+        substrate_peak_detection_settings = {
+            "enabled": self.model.substrate_peak_detection_enabled_var.get(),
+            "min_height": self.model.substrate_peak_detection_height_var.get(),
+            "min_width": self.model.substrate_peak_detection_width_var.get(),
         }
 
         plot_settings = data_analyzer.PlotSettings(
@@ -109,6 +116,7 @@ class PlotHandler:
             spacing=spacing,
             appearance=appearance_settings,
             peak_detection_settings=peak_detection_settings,
+            substrate_peak_detection_settings=substrate_peak_detection_settings,
         )
 
         return plot_data_full, plot_settings
