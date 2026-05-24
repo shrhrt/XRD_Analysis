@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('assets/XRD_ANALYSIS_ICON.ico', 'assets')]
 binaries = []
 hiddenimports = ['tkinterdnd2']
 tmp_ret = collect_all('sv_ttk')
@@ -33,6 +33,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    icon='assets/XRD_ANALYSIS_ICON.ico',
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,

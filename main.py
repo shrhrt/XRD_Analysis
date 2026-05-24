@@ -1,8 +1,14 @@
 import os
+import sys
 import logging
 from tkinterdnd2 import TkinterDnD
 import sv_ttk
 from ui.main_window import MainWindow
+
+
+def _asset_path(relative_path):
+    base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, relative_path)
 
 
 def setup_logging():
@@ -27,6 +33,10 @@ def main():
 
     root = TkinterDnD.Tk()
     sv_ttk.set_theme("light")
+
+    icon_path = _asset_path(os.path.join("assets", "XRD_ANALYSIS_ICON.ico"))
+    if os.path.exists(icon_path):
+        root.iconbitmap(icon_path)
 
     app = MainWindow(master=root)
     app.mainloop()
