@@ -60,10 +60,10 @@ class MainWindow(ttk.Frame):
     def toggle_theme(self):
         if sv_ttk.get_theme() == "dark":
             sv_ttk.set_theme("light")
-            self.theme_button.config(text="ダークモードに切り替え")
+            self._view_menu.entryconfig(0, label="ダークモードに切り替え")
         else:
             sv_ttk.set_theme("dark")
-            self.theme_button.config(text="ライトモードに切り替え")
+            self._view_menu.entryconfig(0, label="ライトモードに切り替え")
 
     def create_menu(self):
         self.menubar = tk.Menu(self.master)
@@ -89,14 +89,11 @@ class MainWindow(ttk.Frame):
         file_menu.add_separator()
         file_menu.add_command(label="終了", command=self.on_closing)
 
-    def create_widgets(self):
-        top_frame = ttk.Frame(self)
-        top_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
-        self.theme_button = ttk.Button(
-            top_frame, text="ダークモードに切り替え", command=self.toggle_theme
-        )
-        self.theme_button.pack(side=tk.RIGHT)
+        self._view_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="表示", menu=self._view_menu)
+        self._view_menu.add_command(label="ダークモードに切り替え", command=self.toggle_theme)
 
+    def create_widgets(self):
         main_pane = tk.PanedWindow(
             self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=5
         )
