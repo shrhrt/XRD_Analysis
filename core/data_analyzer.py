@@ -485,7 +485,6 @@ def draw_plot(
 
     # ステップ2: Y軸の範囲を計算
     if not all_plot_points_y or np.all(np.isnan(all_plot_points_y)):
-        ymin_val, ymax_val = 1, 10
         ymin_val, ymax_val = (1, 10) if yscale == "log" else (0, 100)
     else:
         with np.errstate(all="ignore"):
@@ -587,7 +586,6 @@ def draw_plot(
     )
 
     ax.set_xlim(x_range[0], x_range[1])
-    ax.set_yscale("log")
     ax.set_yscale(yscale)
     ax.xaxis.set_major_locator(
         MultipleLocator(appearance.get("xaxis_major_tick_spacing", 10))

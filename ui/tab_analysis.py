@@ -195,14 +195,14 @@ class AnalysisTab:
     def calculate_d_spacing(self, *args):
         try:
             two_theta_deg = float(self.app.model.d_spacing_input_2theta_var.get())
+        except (ValueError, TypeError):
+            self.app.model.d_spacing_result_var.set("エラー: 有効な数値を入力してください")
+            return
+        try:
             d = data_analyzer.calculate_d_value(two_theta_deg)
             self.app.model.d_spacing_result_var.set(f"{d:.5f} Å")
         except ValueError as e:
             self.app.model.d_spacing_result_var.set(f"エラー: {e}")
-        except (ValueError, TypeError):
-            self.app.model.d_spacing_result_var.set(
-                "エラー: 有効な数値を入力してください"
-            )
 
     def copy_d_spacing(self, *args):
         try:
@@ -219,9 +219,11 @@ class AnalysisTab:
             h = int(self.app.model.lc_h_var.get())
             k = int(self.app.model.lc_k_var.get())
             l = int(self.app.model.lc_l_var.get())
+        except (ValueError, TypeError):
+            self.app.model.lc_result_var.set("エラー: 有効な数値を入力してください")
+            return
+        try:
             a = data_analyzer.calculate_lattice_constant(d, h, k, l)
             self.app.model.lc_result_var.set(f"a = {a:.5f} Å")
         except ValueError as e:
             self.app.model.lc_result_var.set(f"エラー: {e}")
-        except (ValueError, TypeError):
-            self.app.model.lc_result_var.set("エラー: 有効な数値を入力してください")

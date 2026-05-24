@@ -54,17 +54,22 @@ class PlotHandler:
         except ValueError:
             return None
 
-        reference_peaks = [
-            {
+        reference_peaks = []
+        for i in range(10):
+            raw = self.model.peak_angle_vars[i].get().strip()
+            if not raw:
+                continue
+            try:
+                angle = float(raw)
+            except (ValueError, TypeError):
+                continue
+            reference_peaks.append({
                 "name": self.model.peak_name_vars[i].get().strip(),
-                "angle": float(self.model.peak_angle_vars[i].get().strip()),
+                "angle": angle,
                 "visible": self.model.peak_visible_vars[i].get(),
                 "color": self.model.peak_color_vars[i].get(),
                 "linestyle": self.model.peak_style_vars[i].get(),
-            }
-            for i in range(10)
-            if self.model.peak_angle_vars[i].get().strip()
-        ]
+            })
 
         appearance_settings = {
             "xlabel": self.model.xlabel_var.get(),
