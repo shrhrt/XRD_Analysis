@@ -133,7 +133,11 @@ class SettingsHandler:
                     color = peak_data.get("color", "#000000")
                     self.model.peak_color_vars[i].set(color)
                     self.app.peak_color_buttons[i].config(fg=color)
-                    self.model.peak_style_vars[i].set(peak_data.get("style", "--"))
+                    style_val = peak_data.get("style", "--")
+                    self.model.peak_style_vars[i].set(style_val)
+                    _ls_rev = {"-": "実線", "--": "破線", ":": "点線", "-.": "一点鎖線"}
+                    if hasattr(self.app, "peak_style_combos") and i < len(self.app.peak_style_combos):
+                        self.app.peak_style_combos[i].set(_ls_rev.get(style_val, "破線"))
 
         self.app._toggle_spacing_widget()
         self.app._toggle_minor_xticks_widgets()

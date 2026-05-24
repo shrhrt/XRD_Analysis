@@ -126,6 +126,7 @@ class ReferencePeaksTab:
         )
         scrollbar.grid(row=0, column=1, sticky="ns")
         canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(-1 * (e.delta // 120), "units"))
 
         self.app.peak_frame = tk.Frame(canvas)
         canvas.create_window((0, 0), window=self.app.peak_frame, anchor="nw")
@@ -142,6 +143,8 @@ class ReferencePeaksTab:
         tk.Label(self.app.peak_frame, text="線種").grid(row=0, column=5)
 
         linestyle_map = {"実線": "-", "破線": "--", "点線": ":", "一点鎖線": "-."}
+        self._linestyle_reverse = {v: k for k, v in linestyle_map.items()}
+        self.app.peak_style_combos = []
         for i in range(10):
             tk.Label(self.app.peak_frame, text=f"#{i + 1}").grid(
                 row=i + 1, column=0, padx=(5, 2), pady=2, sticky="w"
@@ -196,6 +199,7 @@ class ReferencePeaksTab:
             )
             style_combo.grid(row=i + 1, column=5, padx=(2, 5), pady=2)
             self.app.model.peak_style_vars.append(style_var)
+            self.app.peak_style_combos.append(style_combo)
 
             tk.Button(
                 self.app.peak_frame,
@@ -256,6 +260,7 @@ class ReferencePeaksTab:
                 self.app.model.peak_color_vars[i].set("#000000")
                 self.app.peak_color_buttons[i].config(fg="#000000")
                 self.app.model.peak_style_vars[i].set("--")
+                self.app.peak_style_combos[i].set("破線")
         self.app.schedule_update()
 
     def load_spin_filter_preset(self):
@@ -340,6 +345,8 @@ class ReferencePeaksTab:
                 color = peak_data.get("color", "#000000")
                 self.app.model.peak_color_vars[i].set(color)
                 self.app.peak_color_buttons[i].config(fg=color)
-                self.app.model.peak_style_vars[i].set(peak_data.get("style", "--"))
+                style_val = peak_data.get("style", "--")
+                self.app.model.peak_style_vars[i].set(style_val)
+                self.app.peak_style_combos[i].set(self._linestyle_reverse.get(style_val, "破線"))
 
         self.app.schedule_update()
