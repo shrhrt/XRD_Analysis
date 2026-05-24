@@ -193,7 +193,14 @@ class SettingsHandler:
         if not self.get_restore_on_startup():
             return
         settings = ConfigManager.load_from_file(self.app.config_file)
-        if settings:
+        if not settings:
+            return
+        answer = messagebox.askyesno(
+            "セッションの復元",
+            "前回のセッション（ファイル・設定）を復元しますか？",
+            parent=self.app.master,
+        )
+        if answer:
             self.apply_config_dict(settings, is_app_config=True)
 
     def save_app_config(self):
