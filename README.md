@@ -1,13 +1,13 @@
 <div align="center">
-  <h1><img src="assets/XRD_ANALYSIS_ICON.ico" width="60" alt="App Icon" style="vertical-align: middle; margin-right: 10px;"> XRD Data Plotter</h1>
+  <h1><img src="assets/XRD_ANALYSIS_ICON.ico" width="60" alt="App Icon" style="vertical-align: middle; margin-right: 10px;"> XRD ANALYSIS</h1>
   <p>X線回折（XRD）データの可視化・ピークフィット・解析のためのデスクトップGUIアプリケーション</p>
   <img src="https://img.shields.io/badge/Python-3.12+-blue?logo=python" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows" alt="Platform">
   <img src="https://img.shields.io/badge/GUI-Tkinter%20%2F%20sv--ttk-green" alt="GUI">
   <img src="https://img.shields.io/badge/Plot-Matplotlib-orange" alt="Matplotlib">
   <br><br>
-  <a href="https://github.com/shrhrt/XRD_Analysis/releases/latest">
-    <img src="https://img.shields.io/github/v/release/shrhrt/XRD_Analysis?label=Download&color=brightgreen&logo=github" alt="Download">
+  <a href="https://github.com/shrhrt/XRD_ANALYSIS/releases/latest">
+    <img src="https://img.shields.io/github/v/release/shrhrt/XRD_ANALYSIS?label=Download&color=brightgreen&logo=github" alt="Download">
   </a>
 </div>
 
@@ -209,13 +209,32 @@ sv_ttk はボタン背景色をTCLエレメントレベルで上書きするた�
 
 > **動作環境: Windows 10 / 11** — Python 不要、ZIP を解凍してすぐ使える。
 
-1. **ダウンロード** — [Releases ページ](https://github.com/shrhrt/XRD_Analysis/releases) から最新 ZIP を取得・解凍
-2. **起動** — `XRD解析プログラム.exe` をダブルクリック
-   SmartScreen 警告が出た場合は「詳細情報」→「実行」（初回のみ）
-3. **データ読み込み** — `.ras` ファイルをウィンドウへドラッグ＆ドロップ → グラフが即座に描画される
-4. **参照ピーク** — 「参照ピーク」タブ → 「物質を選択...」で物質を選ぶ → ピークがグラフに重畳される
-5. **ピークフィット** — 「ピークフィット」タブ → フィットモード ON → ピーク範囲をグラフ上でドラッグ
-6. **エクスポート** — 「エクスポート」タブ → 幅・高さ・形式を指定して「グラフを保存」
+**ステップ 1 — ダウンロード**
+
+GitHubの [Releases ページ](https://github.com/shrhrt/XRD_ANALYSIS/releases) から最新の ZIP をダウンロードして解凍する。
+
+**ステップ 2 — 起動**
+
+解凍したフォルダ内の `XRD解析プログラム.exe` をダブルクリック。
+
+> **SmartScreen 警告が表示された場合**
+> 「詳細情報」→「実行」の順に選択すると起動できる。初回のみ表示される。
+
+**ステップ 3 — データを読み込む**
+
+`.ras` ファイルをウィンドウにドラッグ＆ドロップするとグラフが即座に描画される。
+
+**ステップ 4 — 参照ピークを重ねる**
+
+「参照ピーク」タブ → 「物質を選択...」メニューから物質名を選ぶと、ピーク位置が自動でグラフに重畳される。
+
+**ステップ 5 — ピークをフィットする**
+
+「ピークフィット」タブ → 「フィットモード: ON」→ グラフ上でピーク範囲をドラッグ選択。
+
+**ステップ 6 — グラフを保存する**
+
+「エクスポート」タブ → サイズ・形式を指定して「グラフを保存」。
 
 ---
 
@@ -225,8 +244,8 @@ sv_ttk はボタン背景色をTCLエレメントレベルで上書きするた�
 
 ```bat
 :: リポジトリのクローン
-git clone https://github.com/shrhrt/XRD_Analysis.git
-cd XRD_Analysis
+git clone https://github.com/shrhrt/XRD_ANALYSIS.git
+cd XRD_ANALYSIS
 
 :: 仮想環境の作成・有効化
 python -m venv venv
