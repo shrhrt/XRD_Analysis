@@ -1,5 +1,5 @@
 <div align="center">
-  <h1><img src="assets/XRD_ANALYSIS_ICON.ico" width="60" alt="App Icon" style="vertical-align: middle; margin-right: 10px;"> XRD ANALYSIS</h1>
+  <h1><img src="assets/XRD_ANALYSIS_ICON.ico" width="60" alt="App Icon" style="vertical-align: middle; margin-right: 10px;"> XRD Data Plotter</h1>
   <p>X線回折（XRD）データの可視化・ピークフィット・解析のためのデスクトップGUIアプリケーション</p>
   <img src="https://img.shields.io/badge/Python-3.12+-blue?logo=python" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows" alt="Platform">
@@ -207,7 +207,7 @@ sv_ttk はボタン背景色をTCLエレメントレベルで上書きするた�
 
 ## クイックスタート
 
-> **動作環境: Windows 10 / 11** — Python 不要、ZIP を解凍してすぐ使える。
+**動作環境: Windows 10 / 11**
 
 **ステップ 1 — ダウンロード**
 
