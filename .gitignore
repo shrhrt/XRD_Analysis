@@ -7,9 +7,11 @@ env/
 *.pyo
 *.pyd
 
-# PyInstaller
+# PyInstaller / Nuitka build outputs
 build/
 dist/
+dist_nuitka/
+*.build/
 
 # Jupyter Notebook
 .ipynb_checkpoints/

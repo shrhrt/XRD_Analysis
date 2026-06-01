@@ -28,6 +28,15 @@ def setup_logging():
     return logging.getLogger(__name__)
 
 
+def _close_splash():
+    """PyInstaller スプラッシュスクリーンを閉じる。通常実行時は何もしない。"""
+    try:
+        import pyi_splash  # type: ignore
+        pyi_splash.close()
+    except ImportError:
+        pass
+
+
 def main():
     logger = setup_logging()
     logger.info("XRD Plotter アプリケーションを起動しました。")
@@ -42,6 +51,10 @@ def main():
 
     root.state("zoomed")
     app = MainWindow(master=root)
+
+    # ウィンドウが描画されてからスプラッシュを閉じる
+    root.after(100, _close_splash)
+
     app.mainloop()
 
 
