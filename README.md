@@ -5,6 +5,7 @@
   <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows" alt="Platform">
   <img src="https://img.shields.io/badge/GUI-Tkinter%20%2F%20sv--ttk-green" alt="GUI">
   <img src="https://img.shields.io/badge/Plot-Matplotlib-orange" alt="Matplotlib">
+  <img src="https://img.shields.io/badge/Build-Nuitka-purple" alt="Nuitka">
   <br><br>
   <a href="https://github.com/shrhrt/XRD_ANALYSIS/releases/latest">
     <img src="https://img.shields.io/github/v/release/shrhrt/XRD_ANALYSIS?label=Download&color=brightgreen&logo=github" alt="Download">
@@ -37,9 +38,6 @@
 
 **XRD Data Plotter** は、Rigaku製装置が出力する `.ras` 形式のXRDデータを読み込み、プロット・参照ピーク比較・ピークフィット・グラフ出力までを一画面で完結させるデスクトップGUIアプリケーションである。
 
-<!-- ここにアプリの全体スクリーンショットを挿入 -->
-![アプリケーション外観](assets/images/overview.png)
-
 ---
 
 ## 開発の背景
@@ -62,9 +60,6 @@
 
 ### 1. 柔軟で高速なデータ読み込み
 
-<!-- ここにD&DのGIFを挿入 -->
-![データ読み込み](assets/images/drag_and_drop.gif)
-
 - **ドラッグ＆ドロップ対応**: エクスプローラーから複数の `.ras` ファイルをリストボックスやグラフ領域に直接ドロップして一括読み込み。
 - **最近開いたファイル**: メニューバー「ファイル → 最近開いたファイル」から直近使用のファイル群へ素早くアクセス可能。
 - **ファイル順の管理**: ↑↓ボタンでリスト内の表示順を自由に並び替え。選択削除にも対応。
@@ -73,9 +68,6 @@
 ---
 
 ### 2. 高度なプロット設定と参照ピーク比較
-
-<!-- ここにプロット設定・参照ピーク重畳のスクリーンショットを挿入 -->
-![プロット設定と参照ピーク](assets/images/plot_reference.png)
 
 **プロット設定**
 - **X軸範囲**: レンジスライダーまたはスピンボックスで0〜180°の範囲を直感的に設定。
@@ -98,9 +90,6 @@
 ---
 
 ### 3. ピークフィットと定量解析
-
-<!-- ここにピークフィットのGIFを挿入 -->
-![ピークフィット](assets/images/peak_fit.gif)
 
 - **グラフ上でのドラッグ選択**: 「ピークフィット」タブでフィットモードをONにし、グラフ上でフィットしたい範囲をマウスドラッグで選択するだけで自動解析を実行。
 - **Gaussianフィット**: SciPy の `curve_fit` を用いて線形バックグラウンド付きGauss関数をフィットし、以下を算出。
@@ -126,9 +115,6 @@
 
 ### 4. データ管理と出力
 
-<!-- ここにエクスポートのスクリーンショットを挿入 -->
-![エクスポート](assets/images/export.png)
-
 - **高解像度エクスポート**: 描画グラフを任意の幅・高さ（inch指定）・フォーマット（PNG / PDF / SVG）で保存。保存前にプレビューウィンドウで確認可能。
 - **設定の保存・読込**: 現在のファイルリスト・プロット設定・参照ピーク構成をJSONファイルとして保存し、後日完全に復元。
 - **ダーク / ライトモード**: メニューバー「表示 → ダーク/ライトモードに切り替え」でテーマをリアルタイムに変更。
@@ -142,14 +128,14 @@
 
 | カテゴリ | 使用技術 | 選定理由 |
 | :--- | :--- | :--- |
-| **開発言語** | Python 3.12+ | 科学計算ライブラリの充実さと、PyInstallerによる単体exe配布の容易さ |
+| **開発言語** | Python 3.12+ | 科学計算ライブラリの充実さと単体フォルダ配布の容易さ |
 | **GUIフレームワーク** | Tkinter / ttk | Python標準ライブラリ。外部依存ゼロで `.exe` 配布が可能 |
 | **GUIテーマ** | sv_ttk 2.6.1 | Windows 11にネイティブに馴染む、フラットなモダンデザイン |
 | **D&Dサポート** | tkinterdnd2 | Tkinterが標準で持たないドラッグ＆ドロップ機能を補完 |
 | **データ可視化** | Matplotlib | 論文品質のSVG/PDF出力・TeX記法サポート |
 | **数値計算** | NumPy | 測定データの高速ベクトル演算 |
 | **ピークフィット** | SciPy | `curve_fit`（Gaussianフィット）と `find_peaks`（ピーク検出）を使用 |
-| **パッケージング** | PyInstaller | 単体の `.exe` に固めてPython環境のないPCでも動作させるため |
+| **パッケージング** | Nuitka | PythonをCにコンパイルし、起動時間を大幅短縮。PyInstaller比で約2〜3倍高速 |
 
 ---
 
@@ -258,13 +244,21 @@ pip install -r requirements.txt
 python main.py
 ```
 
-**実行ファイルのビルド**
+**実行ファイルのビルド（Nuitka — 推奨）**
+
+```bat
+build_nuitka.bat
+```
+
+`dist_nuitka\main.dist\XRD解析プログラム.exe` が生成される。初回ビルドは5〜10分程度かかる。
+
+**実行ファイルのビルド（PyInstaller — 代替）**
 
 ```bat
 pyinstaller "XRD解析プログラム.spec"
 ```
 
-ビルド成功後、`dist\XRD解析プログラム\XRD解析プログラム.exe` が生成される。
+`dist\XRD解析プログラム\XRD解析プログラム.exe` が生成される。
 
 ---
 
@@ -274,4 +268,4 @@ pyinstaller "XRD解析プログラム.spec"
 - **Lorentz / Pseudo-Voigt 関数によるフィット**: Gaussian に加えてより汎用なピーク形状モデルを追加し、非対称なピークにも対応
 - **バックグラウンド自動除去**: 線形・多項式フィッティングによるバックグラウンドの前処理機能を追加し、フィット精度を向上
 - **大容量ファイルの非同期読込**: マルチスレッド処理を導入し、大容量データ読み込み時のUIフリーズを防止
-- **CI/CD パイプラインの構築**: GitHub Actions による pytest 自動実行・PyInstaller ビルドの自動化
+- **CI/CD パイプラインの構築**: GitHub Actions による pytest 自動実行・Nuitka ビルドの自動化とリリース添付
